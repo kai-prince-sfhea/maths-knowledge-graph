@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "composition",
+      "concept": "demo:composition",
+      "scope": "algebra",
+      "roles": ["left", "right"],
+      "default": "infix",
+      "variants": [
+        {
+          "id": "infix",
+          "label": "Infix composition",
+          "tex": "{{left}} \\circ {{right}}",
+          "description": "The authored composition glyph, with the left argument first."
+        },
+        {
+          "id": "named",
+          "label": "Named composition",
+          "tex": "\\operatorname{compose}({{left}},{{right}})",
+          "description": "An author-approved named form for this synthetic algebra concept."
+        }
+      ]
+    },
+    {
+      "id": "probability-combination",
+      "concept": "demo:probability-combination",
+      "scope": "probability",
+      "roles": ["left", "right"],
+      "default": "infix",
+      "variants": [
+        {
+          "id": "infix",
+          "label": "Infix combination",
+          "tex": "{{left}} \\circ {{right}}",
+          "description": "The authored combination glyph, with the left argument first."
+        },
+        {
+          "id": "named",
+          "label": "Named combination",
+          "tex": "\\operatorname{combine}({{left}},{{right}})",
+          "description": "An author-approved named form for the distinct synthetic probability concept."
+        }
+      ]
+    }
+  ]
+}

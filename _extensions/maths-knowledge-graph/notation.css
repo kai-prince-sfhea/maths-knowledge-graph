@@ -1,0 +1,12 @@
+/* Copyright 2026 Kai Prince; SPDX-License-Identifier: Apache-2.0 */
+.maths-notation-variant[hidden] { display: none !important; }
+.maths-notation-panel { border: 1px solid currentColor; padding: .75rem; margin: .5rem 0 1rem; }
+.maths-notation-panel > label, .maths-notation-panel > select { display: block; margin-bottom: .5rem; }
+.maths-notation-panel select { max-width: 100%; }
+.maths-notation-panel button { margin: .25rem .5rem .25rem 0; }
+.maths-notation-panel :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.maths-notation-status { margin-top: .5rem; margin-bottom: 0; }
+@media print {
+  .maths-notation-controls { display: none !important; }
+  .maths-notation-variant[hidden] { display: none !important; }
+}

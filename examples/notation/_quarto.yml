@@ -1,0 +1,27 @@
+# Copyright 2026 Kai Prince. Synthetic example, Apache-2.0.
+project:
+  type: website
+  render:
+    - index.qmd
+    - second.qmd
+
+website:
+  title: Scoped notation demonstration
+  navbar:
+    left:
+      - href: index.qmd
+        text: Overview
+      - href: second.qmd
+        text: Another page
+
+format:
+  html:
+    html-math-method: mathml
+  docx: default
+
+filters: [maths-knowledge-graph]
+maths-knowledge-graph:
+  declarations: knowledge.json
+  notation: notation.json
+
+lang: en

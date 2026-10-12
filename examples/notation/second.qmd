@@ -1,0 +1,24 @@
+---
+title: "Preferences on another page"
+---
+
+This page reuses the same explicitly identified notation profiles. The canonical concept declarations and the associativity definition are on the [overview page](index.qmd).
+
+## Two scoped occurrences
+
+For synthetic composition in algebra, the annotated expression is [$x \circ y$]{.maths-notation profile="composition" arg-left="x" arg-right="y"}.
+
+For synthetic probability combination, the annotated expression is [$x \circ y$]{.maths-notation profile="probability-combination" arg-left="x" arg-right="y"}.
+
+The plain expression $x \circ y$ remains unannotated and keeps its authored notation. Matching a glyph alone does not establish a shared concept or request a preference change.
+
+## Notation controls and reset
+
+Use these controls to inspect or reset either scoped choice without returning to the overview. Retaining preferences across navigation requires opting into local persistence. Static outputs retain the authored default and a readable list of approved alternatives.
+
+::: {#notation-preferences .maths-notation-glossary}
+:::
+
+[Return to the overview and definition](index.qmd).
+
+Copyright 2026 Kai Prince. This original synthetic example is licensed under Apache-2.0.

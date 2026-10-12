@@ -1,0 +1,36 @@
+---
+title: "Two meanings of one glyph"
+---
+
+This small website demonstrates scoped notation preferences with original synthetic content. The declarations and alternative notation are author-approved examples; mathematical equivalence and the operation laws require independent review.
+
+## Distinct concepts
+
+The first concept is [synthetic composition]{#term-composition} in the algebra scope. Its annotated expression is [$x \circ y$]{.maths-notation profile="composition" arg-left="x" arg-right="y"}.
+
+The second concept is [synthetic probability combination]{#term-probability-combination} in the probability scope. Its annotated expression is [$x \circ y$]{.maths-notation profile="probability-combination" arg-left="x" arg-right="y"}. This demonstration declares a distinct operation name and scope; it supplies no probability law or numerical calculation.
+
+An ordinary, unannotated expression such as $x \circ y$ keeps its authored notation. The generated definition below likewise keeps its authored operation: its mathematical parameters are separate from these annotated preference occurrences.
+
+## Defining associativity
+
+The [associativity condition]{#concept-associativity} has its own concept identity. The following native definition has a separate assertion identity and a declared `defines` relation to that concept. The template states the condition that a closed binary operation would need to satisfy.
+
+::: {#def-associativity .maths-instance template="associativity" carrier="G" operation="\circ" name="Associativity condition"}
+:::
+
+See @def-associativity for the condition and the glossary below for its explicit dependencies.
+
+## Choose notation
+
+Select an approved notation for each concept. The same glyph can have different choices in the two scopes. The controls offer authored-default reset and optional local persistence; the [second page](second.qmd) contains the same annotated concepts and its own controls.
+
+::: {#notation-preferences .maths-notation-glossary}
+:::
+
+## Declared mathematical glossary
+
+::: {#mathematical-glossary .maths-glossary}
+:::
+
+Copyright 2026 Kai Prince. This original synthetic example is licensed under Apache-2.0.

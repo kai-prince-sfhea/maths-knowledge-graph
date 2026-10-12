@@ -1,0 +1,6 @@
+Copyright 2026 Kai Prince.
+Original Maths Knowledge Graph code, documentation and synthetic example material
+are licensed under the Apache License, Version 2.0. See LICENSE.
+OpenAI Codex materially assisted implementation, fixtures, tests and documentation.
+Consumer-created research, prose and data retain their separately declared rights.
+No Quarto, Pandoc, MathJax, model or other upstream runtime is bundled.

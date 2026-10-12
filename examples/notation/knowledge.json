@@ -1,0 +1,68 @@
+{
+  "version": 0,
+  "namespaces": {"demo": "https://example.org/maths-notation/"},
+  "sources": [{"path": "index.qmd"}, {"path": "second.qmd"}],
+  "objects": [
+    {
+      "id": "demo:composition",
+      "type": "concept",
+      "scope": "algebra",
+      "labels": {"en": "Synthetic composition"},
+      "review": "declared",
+      "public": true,
+      "source": {"path": "index.qmd", "anchor": "term-composition"},
+      "properties": {"notation": "\\circ"}
+    },
+    {
+      "id": "demo:probability-combination",
+      "type": "concept",
+      "scope": "probability",
+      "labels": {"en": "Synthetic probability combination"},
+      "review": "declared",
+      "public": true,
+      "source": {"path": "index.qmd", "anchor": "term-probability-combination"},
+      "properties": {"notation": "\\circ"}
+    },
+    {
+      "id": "demo:associativity-condition",
+      "type": "concept",
+      "scope": "algebra",
+      "labels": {"en": "Associativity condition"},
+      "review": "declared",
+      "public": true,
+      "source": {"path": "index.qmd", "anchor": "concept-associativity"}
+    },
+    {
+      "id": "demo:associativity-definition",
+      "type": "assertion",
+      "scope": "algebra",
+      "labels": {"en": "Definition of the associativity condition"},
+      "review": "declared",
+      "public": true,
+      "source": {"path": "index.qmd", "anchor": "def-associativity"},
+      "properties": {"math-kind": "definition"}
+    }
+  ],
+  "relations": [
+    {
+      "id": "demo:defines-associativity",
+      "type": "defines",
+      "from": "demo:associativity-definition",
+      "to": "demo:associativity-condition",
+      "scope": "algebra",
+      "review": "declared",
+      "public": true,
+      "source": {"path": "index.qmd", "anchor": "def-associativity"}
+    },
+    {
+      "id": "demo:associativity-requires-composition",
+      "type": "requires",
+      "from": "demo:associativity-definition",
+      "to": "demo:composition",
+      "scope": "algebra",
+      "review": "declared",
+      "public": true,
+      "source": {"path": "index.qmd", "anchor": "def-associativity"}
+    }
+  ]
+}

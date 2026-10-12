@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Maths Knowledge Graph options",
+  "description": "Reference schema for the maths-knowledge-graph configuration mapping. It is supplied for explicit external validation; the extension does not register automatic Quarto editor integration. The native filter remains authoritative for effective rebased paths and its UTF-8 byte bounds.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enable mathematical catalogue validation, finite templates and optional notation. False leaves native source unchanged without reading catalogue or registry files."
+    },
+    "declarations": {
+      "$ref": "#/$defs/localJsonPath",
+      "default": "knowledge.json",
+      "description": "Local literal JSON catalogue. Default knowledge.json is resolved from the project root or standalone document directory; an explicit effective path follows Quarto's inherited metadata rebasing."
+    },
+    "notation": {
+      "$ref": "#/$defs/localJsonPath",
+      "description": "Optional local literal JSON notation registry, using notation.schema.json. Absence disables notation authoring; it does not request a network resource or a model."
+    }
+  },
+  "$defs": {
+    "localJsonPath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?![/\\\\])(?!.*[\\u0000-\\u001f\\u007f?:#]).*\\S.*$",
+      "description": "Relative local path with no controls, URI scheme, query or fragment. Forward/backslash separators are admitted. Effective dot components must resolve lexically within the trusted project/document root; the filter does not claim real-path confinement of symlinks or junctions. The native 4096 limit is UTF-8 bytes; JSON Schema maxLength counts Unicode code points. No filename extension is inferred or enforced."
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# Data-only Knowledge Graph Extraction schema version 0.
+# Select this file explicitly through knowledge-graph.schema when combining
+# the extensions. Existing concept/assertion and defines/requires meanings
+# are retained; the Maths Knowledge Graph filter checks mathematical roles.
+version: 0
+extends: default
+object-types:
+  concept:
+    properties:
+      notation:
+        type: string
+    public-fields: [notation]
+  assertion:
+    properties:
+      math-kind:
+        type: string
+        enum:
+          - definition
+          - theorem
+          - lemma
+          - proposition
+          - corollary
+          - conjecture
+          - axiom
+          - assumption
+          - proof
+      proof-status:
+        type: string
+        enum: [unverified, author-reviewed, formal-candidate]
+    public-fields: [math-kind, proof-status]
+relation-types:
+  proves:
+    from: [assertion]
+    to: [assertion]
+    description: Author-declared proof association; does not establish proof validity or formal checking.
+    properties: {}
+    public-fields: []
+  assumes:
+    from: [assertion]
+    to: [assertion]
+    description: Author-declared assumption association; the Maths Knowledge Graph filter checks endpoint roles.
+    properties: {}
+    public-fields: []

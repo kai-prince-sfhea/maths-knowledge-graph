@@ -1,0 +1,53 @@
+---
+title: "Maths Knowledge Graph: positive squares"
+lang: en-GB
+filters: [maths-knowledge-graph]
+format:
+  html: default
+  docx: default
+---
+
+This original synthetic article demonstrates explicit mathematical declarations,
+an assumption, two associated proofs and a static glossary. The declarations
+are in the local literal-JSON `knowledge.json` catalogue. They do not establish independent
+mathematical review or formal verification.
+
+::: {#def-square name="Square of a real number" am-macro="amSquare" am-args="value" am-intent="square($value)" am-tex="(#1)^2"}
+The [square]{#concept-square} of a real number $x$ is the product $x\cdot x$,
+written $x^2$.
+:::
+
+::: {#thm-square name="Positive squares"}
+For every nonzero real number $x$, the square $x^2$ is positive.
+:::
+
+The term is defined in @def-square. [Read the assumptions](#assumption-real),
+[follow the proof by signs](#prf-sign), or
+[follow the proof using absolute value](#prf-absolute) for @thm-square.
+
+::: {#assumption-real .am-assumption am-summary="Assumption: a nonzero real input"}
+The input $x$ belongs to the ordered field of real numbers and satisfies $x\ne0$.
+The nonzero condition excludes the case $x^2=0$.
+:::
+
+::: {#prf-sign .proof am-summary="Proof by signs"}
+If $x>0$, the product $x\cdot x$ is positive. If $x<0$, then $-x>0$,
+so $x^2=(-x)\cdot(-x)>0$. A nonzero real number has one of these two signs.
+:::
+
+::: {#prf-absolute .proof am-summary="Proof using absolute value"}
+For a nonzero real number $x$, its absolute value satisfies $|x|>0$.
+The product of two positive real numbers is positive, so $|x|^2>0$.
+Since $|x|^2=x^2$, the conclusion follows.
+:::
+
+## Mathematical glossary
+
+::: {#maths-glossary .maths-glossary}
+:::
+
+[The catalogue is explicit; matching words do not create new identities.]{#catalogue-note}
+
+The glossary records authored associations and proof statuses. Its prerequisite
+links describe reading dependencies; a path through them is not a mathematical
+proof. This example and its original synthetic catalogue use Apache License 2.0.

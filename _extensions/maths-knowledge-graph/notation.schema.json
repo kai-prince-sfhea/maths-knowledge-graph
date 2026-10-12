@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Maths Knowledge Graph finite notation registry",
+  "description": "Reference structural schema for author-approved notation registry version 1. Native validation additionally checks declared public concept identities and exact scopes, unique profile/variant keys, a declared default, complete role placeholders in identical order, safe nonbinding TeX and equal operation-token counts. These checks do not prove mathematical equivalence. This schema is not automatically registered with the Quarto editor. Whole-file native limits are 2 MiB and 64 JSON nesting levels; duplicate decoded mapping keys are refused.",
+  "$comment": "Native text bounds are UTF-8 bytes, whereas JSON Schema maxLength counts Unicode code points. Runtime validation remains authoritative, particularly for non-ASCII text and semantic cross-record constraints. Registry values are literal JSON, not Markdown metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "profiles"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "profiles": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {"$ref": "#/$defs/profile"},
+      "description": "May be empty. Profile IDs must be unique; no public/private eligibility is inferred from an ID or spelling."
+    }
+  },
+  "$defs": {
+    "localKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "literal": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!.*[\\u0000-\\u001f\\u007f]).*\\S.*$",
+      "description": "Nonblank literal single-line text. JSON values are not parsed as Markdown."
+    },
+    "conceptIdentity": {
+      "allOf": [{"$ref": "#/$defs/literal"}],
+      "maxLength": 4096,
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*:[^\\s\\u0000-\\u001f\\u007f\\\\<>\"{}]*$",
+      "description": "An HTTP(S) identity or a namespace-qualified compact identity declared in the catalogue. Native validation expands namespaces and requires a supported HTTP(S) URI without credentials, then looks up an explicitly public concept. This schema alone cannot establish that lookup."
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "concept", "scope", "roles", "default", "variants"],
+      "properties": {
+        "id": {"$ref": "#/$defs/localKey"},
+        "concept": {"$ref": "#/$defs/conceptIdentity"},
+        "scope": {
+          "allOf": [{"$ref": "#/$defs/literal"}],
+          "maxLength": 256,
+          "description": "Must match the referenced public concept's catalogue scope exactly."
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/localKey"},
+          "description": "Free argument roles, each used exactly once as {{role}} in every variant. All variants preserve role order; binding expressions are unsupported."
+        },
+        "default": {
+          "$ref": "#/$defs/localKey",
+          "description": "Must equal one declared variant ID within this profile."
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {"$ref": "#/$defs/variant"},
+          "description": "Variant IDs are unique within the profile. Author approval is not independent proof of semantic equivalence."
+        }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "tex", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/localKey"},
+        "label": {"allOf": [{"$ref": "#/$defs/literal"}], "maxLength": 120},
+        "tex": {
+          "allOf": [{"$ref": "#/$defs/literal"}],
+          "maxLength": 1024,
+          "description": "Finite nonbinding TeX using declared {{role}} placeholders, approved operator/grouping commands, optional literal operatorname, digits and supported punctuation. Native validation rejects free literal variables, active TeX, undeclared/binding commands, repeated/missing roles, changed role order, unmatched braces and differing explicit operation-token counts."
+        },
+        "description": {"allOf": [{"$ref": "#/$defs/literal"}], "maxLength": 512}
+      }
+    }
+  }
+}

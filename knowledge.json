@@ -1,0 +1,213 @@
+{
+  "version": 0,
+  "namespaces": {
+    "math": "https://example.org/maths/"
+  },
+  "sources": [
+    {
+      "path": "example.qmd"
+    }
+  ],
+  "objects": [
+    {
+      "id": "math:real-square",
+      "type": "concept",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "Square"
+      },
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "concept-square"
+      },
+      "properties": {
+        "notation": "x^2"
+      }
+    },
+    {
+      "id": "math:definition-real-square",
+      "type": "assertion",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "Square of a real number"
+      },
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "def-square"
+      },
+      "properties": {
+        "math-kind": "definition"
+      }
+    },
+    {
+      "id": "math:positive-square",
+      "type": "assertion",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "Positive squares"
+      },
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "thm-square"
+      },
+      "properties": {
+        "math-kind": "theorem"
+      }
+    },
+    {
+      "id": "math:nonzero-real",
+      "type": "assertion",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "Nonzero real input"
+      },
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "assumption-real"
+      },
+      "properties": {
+        "math-kind": "assumption"
+      }
+    },
+    {
+      "id": "math:proof-sign",
+      "type": "assertion",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "Proof by signs"
+      },
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "prf-sign"
+      },
+      "properties": {
+        "math-kind": "proof",
+        "proof-status": "unverified"
+      }
+    },
+    {
+      "id": "math:proof-absolute",
+      "type": "assertion",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "Proof using absolute value"
+      },
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "prf-absolute"
+      },
+      "properties": {
+        "math-kind": "proof",
+        "proof-status": "unverified"
+      }
+    },
+    {
+      "id": "math:author-only-note",
+      "type": "assertion",
+      "scope": "real-arithmetic",
+      "labels": {
+        "en": "MKG_PRIVATE_CANARY_20261012_7F9C"
+      },
+      "public": false,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "catalogue-note"
+      },
+      "properties": {
+        "math-kind": "assumption"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "math:defines-real-square",
+      "type": "defines",
+      "scope": "real-arithmetic",
+      "from": "math:definition-real-square",
+      "to": "math:real-square",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "def-square"
+      }
+    },
+    {
+      "id": "math:positive-square-requires-real-square",
+      "type": "requires",
+      "scope": "real-arithmetic",
+      "from": "math:positive-square",
+      "to": "math:real-square",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "thm-square"
+      }
+    },
+    {
+      "id": "math:positive-square-assumes-nonzero-real",
+      "type": "assumes",
+      "scope": "real-arithmetic",
+      "from": "math:positive-square",
+      "to": "math:nonzero-real",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "thm-square"
+      }
+    },
+    {
+      "id": "math:sign-proves-positive-square",
+      "type": "proves",
+      "scope": "real-arithmetic",
+      "from": "math:proof-sign",
+      "to": "math:positive-square",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "prf-sign"
+      }
+    },
+    {
+      "id": "math:absolute-proves-positive-square",
+      "type": "proves",
+      "scope": "real-arithmetic",
+      "from": "math:proof-absolute",
+      "to": "math:positive-square",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "prf-absolute"
+      }
+    },
+    {
+      "id": "math:sign-assumes-nonzero-real",
+      "type": "assumes",
+      "scope": "real-arithmetic",
+      "from": "math:proof-sign",
+      "to": "math:nonzero-real",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "prf-sign"
+      }
+    },
+    {
+      "id": "math:absolute-assumes-nonzero-real",
+      "type": "assumes",
+      "scope": "real-arithmetic",
+      "from": "math:proof-absolute",
+      "to": "math:nonzero-real",
+      "public": true,
+      "source": {
+        "path": "example.qmd",
+        "anchor": "prf-absolute"
+      }
+    }
+  ]
+}
