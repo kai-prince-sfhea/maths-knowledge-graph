@@ -309,6 +309,13 @@ maths-knowledge-graph:
 Unknown options and unsupported value types are errors. Boolean settings require
 YAML booleans. Quarto supplies effective project/directory/document/format/profile
 and metadata-file options; the extension does not read `_quarto.yml` separately.
+The effective namespace is authoritative: a higher native metadata layer can
+replace the mapping rather than preserve every project field. Put the complete
+intended `maths-knowledge-graph` mapping at that layer, including nondefault
+catalogue/notation paths. A metadata file does not force an override of an
+explicit document mapping. `enabled: false` works when it is selected in the
+effective mapping; unknown configuration keys are still refused. Removing the
+filter is the unconditional opt-out.
 Explicit paths follow Quarto's metadata rebasing to the input
 document, then are normalized and checked to stay lexically inside the project
 root (or standalone document directory). Source locations describe the containing page and native anchor;
@@ -419,6 +426,12 @@ and resources. The supplied private catalogue record is a synthetic omission
 check; its canary label is never authored into the article body. The example
 does not link to that catalogue as a website resource. Publishing the raw
 catalogue separately would expose all of its records, regardless of eligibility.
+
+Validation diagnostics use fixed field names and catalogue/registry entry
+ordinals instead of rejected private values or IDs. An entry ordinal is not a
+source line number. Ordinary renderer output, source attributes and native
+tool logs can still contain authored or machine-specific data; review and
+redact those privately before sharing a reproduction.
 
 The tested baseline is Windows, Quarto **1.11.5 pre-release** and Pandoc **3.10**.
 Native checks cover local installation/update/removal, disabled/unselected

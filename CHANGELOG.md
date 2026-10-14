@@ -1,5 +1,13 @@
 # Changelog
 
+## Documentation refinement — 14 October 2026
+
+- Clarify complete effective metadata namespaces, document/metadata-file
+  conflicts, authoritative disabling and fixed-field diagnostic privacy.
+- Keep runtime at 0.0.3. No authoring, catalogue, registry or browser preference
+  migration is introduced; native output and runtime bytes remain unchanged.
+
+
 ## 0.0.3 — experimental development, 12 October 2026
 
 - Remove old saved preferences before reset writes an empty record; quota
