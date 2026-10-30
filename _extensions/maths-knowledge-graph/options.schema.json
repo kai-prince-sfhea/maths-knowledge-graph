@@ -10,23 +10,157 @@
       "default": true,
       "description": "Enable mathematical catalogue validation, finite templates and optional notation. False leaves native source unchanged without reading catalogue or registry files."
     },
+    "import-accessible-maths": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatically consume a compatible separately installed current-AST Accessible Maths catalogue only when that producer's catalogue option and per-declaration reviewed/public/scope policy opt in. False disables import. Missing/disabled/incompatible producers retain an unavailable/disabled result, not guessed data. Install and select both filters for AM rendering; installation alone does not activate it. Import-only pages require no empty knowledge.yml."
+    },
+    "graph": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,63}$",
+              "default": "maths"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "default": "Mathematics"
+            },
+            "navigation": {
+              "type": "boolean",
+              "default": true
+            },
+            "search": {
+              "type": "boolean",
+              "default": true
+            },
+            "placement": {
+              "enum": [
+                "append",
+                "placeholder"
+              ],
+              "default": "append"
+            }
+          }
+        }
+      ],
+      "default": true,
+      "description": "When an existing KG composition run is prepared, project selected explicitly public native-visible mathematics into its separate maths graph. Existing author-declared and AM author-reviewed qualifications remain separate. No website canonical catalogue is rewritten. Use one empty page-level .maths-graph Div with placement: placeholder; false disables the bridge. Native mathematical reading remains available without KG/HTML."
+    },
     "declarations": {
-      "$ref": "#/$defs/localJsonPath",
-      "default": "knowledge.json",
-      "description": "Local literal JSON catalogue. Default knowledge.json is resolved from the project root or standalone document directory; an explicit effective path follows Quarto's inherited metadata rebasing."
+      "$ref": "#/$defs/localDataPath",
+      "description": "Optional authoritative local literal YAML or JSON catalogue. If absent, reuse knowledge-graph.declarations; otherwise discover knowledge.yml, knowledge.yaml, then knowledge.json at the project/document root. Explicit paths follow Quarto's effective metadata rebasing."
     },
     "notation": {
-      "$ref": "#/$defs/localJsonPath",
-      "description": "Optional local literal JSON notation registry, using notation.schema.json. Absence disables notation authoring; it does not request a network resource or a model."
+      "$ref": "#/$defs/localDataPath",
+      "description": "Optional local literal YAML or JSON notation registry, using notation.schema.json. Absence disables notation authoring; it does not request a network resource or a model."
+    },
+    "notation-defaults": {
+      "$ref": "#/$defs/notationChoices",
+      "description": "Page author defaults, below validated reader preferences and above registry defaults."
+    },
+    "notation-overrides": {
+      "$ref": "#/$defs/notationChoices",
+      "description": "Required page choices for compatible declared profiles. These take precedence over reader choices without erasing them."
+    },
+    "notation-preferences": {
+      "$ref": "#/$defs/localDataPath",
+      "description": "Explicit local exported notation JSON for native AST/Word/PDF output. Maximum 64 KiB, depth 8, exact current registry identity. It never enables browser persistence."
+    },
+    "formal-proofs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "kernel-host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "description": "Optional explicitly configured HTTPS HTML host page (or HTTP loopback) at the same origin as a separately installed pinned Sandbox runtime. No kernel or model is downloaded during rendering."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 15,
+          "maximum": 120,
+          "default": 90
+        }
+      },
+      "description": "Opt-in deterministic constructive controlled-English proof candidates, including scoped subproofs/cases and explicitly reviewed public prose-proposal imports. Rendering never calls a model or accepts a private raw response. Source fidelity and optional kernel checking remain separate; quantifiers/equality/general mathematical prose remain unsupported by the finite compiler."
+    },
+    "reuse-relations": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "revision",
+          "assumptions-sha256"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "assumptions-sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      },
+      "description": "Explicit qualified relation reuse on this page. Exact public identity, matching declared assertion revision/assumption digest and both current endpoint occurrences are required. No automatic semantic-equivalence or transitive-relation claim."
+    },
+    "scopes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096,
+        "pattern": ".*\\S.*"
+      },
+      "description": "Optional exact mathematical scope names selected from a shared mixed catalogue. Selected objects and relations retain every normal publication/type/source validation; selected relations must resolve entirely within selected scopes. This is a view boundary, not a privacy or extraction boundary."
     }
   },
   "$defs": {
-    "localJsonPath": {
+    "notationChoices": {
+      "type": "object",
+      "maxProperties": 128,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]{0,63}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,63}$"
+      }
+    },
+    "localDataPath": {
       "type": "string",
       "minLength": 1,
       "maxLength": 4096,
       "pattern": "^(?![/\\\\])(?!.*[\\u0000-\\u001f\\u007f?:#]).*\\S.*$",
-      "description": "Relative local path with no controls, URI scheme, query or fragment. Forward/backslash separators are admitted. Effective dot components must resolve lexically within the trusted project/document root; the filter does not claim real-path confinement of symlinks or junctions. The native 4096 limit is UTF-8 bytes; JSON Schema maxLength counts Unicode code points. No filename extension is inferred or enforced."
+      "description": "Relative local path with no controls, URI scheme, query or fragment. Forward/backslash separators are admitted in effective metadata. Dot components must resolve within the project/document root; the installed reader verifies canonical descendants and refuses symlink/junction aliases. This is a file-read boundary, not an operating-system sandbox or hostile concurrent-writer guarantee. The native 4096 limit is UTF-8 bytes; JSON Schema maxLength counts Unicode code points. No filename extension is inferred or enforced."
     }
   }
 }

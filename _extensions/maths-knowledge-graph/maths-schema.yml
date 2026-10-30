@@ -21,6 +21,8 @@ object-types:
           - proposition
           - corollary
           - conjecture
+          - example
+          - exercise
           - axiom
           - assumption
           - proof
@@ -33,11 +35,15 @@ relation-types:
     from: [assertion]
     to: [assertion]
     description: Author-declared proof association; does not establish proof validity or formal checking.
-    properties: {}
-    public-fields: []
+    properties:
+      assertion-revision: {type: string}
+      assumptions-sha256: {type: string}
+    public-fields: [assertion-revision, assumptions-sha256]
   assumes:
     from: [assertion]
     to: [assertion]
     description: Author-declared assumption association; the Maths Knowledge Graph filter checks endpoint roles.
-    properties: {}
-    public-fields: []
+    properties:
+      assertion-revision: {type: string}
+      assumptions-sha256: {type: string}
+    public-fields: [assertion-revision, assumptions-sha256]

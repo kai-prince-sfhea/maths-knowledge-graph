@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Maths Knowledge Graph finite notation registry",
-  "description": "Reference structural schema for author-approved notation registry version 1. Native validation additionally checks declared public concept identities and exact scopes, unique profile/variant keys, a declared default, complete role placeholders in identical order, safe nonbinding TeX and equal operation-token counts. These checks do not prove mathematical equivalence. This schema is not automatically registered with the Quarto editor. Whole-file native limits are 2 MiB and 64 JSON nesting levels; duplicate decoded mapping keys are refused.",
-  "$comment": "Native text bounds are UTF-8 bytes, whereas JSON Schema maxLength counts Unicode code points. Runtime validation remains authoritative, particularly for non-ASCII text and semantic cross-record constraints. Registry values are literal JSON, not Markdown metadata.",
+  "description": "Reference structural schema for author-approved notation registry version 1 in literal YAML or JSON. Native validation additionally checks declared public concept identities and exact scopes, unique profile/variant keys, a declared default, complete role placeholders in identical order, safe nonbinding TeX and equal operation-token counts. These checks do not prove mathematical equivalence. This schema is not automatically registered with the Quarto editor. Whole-file native limits are 2 MiB and 64 nesting levels; duplicate mapping keys are refused. YAML supports the documented bounded literal subset.",
+  "$comment": "Native text bounds are UTF-8 bytes, whereas JSON Schema maxLength counts Unicode code points. Runtime validation remains authoritative, particularly for non-ASCII text and semantic cross-record constraints. Registry values are literal data, not Markdown metadata.",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "profiles"],
@@ -32,7 +32,7 @@
       "allOf": [{"$ref": "#/$defs/literal"}],
       "maxLength": 4096,
       "pattern": "^[A-Za-z][A-Za-z0-9_-]*:[^\\s\\u0000-\\u001f\\u007f\\\\<>\"{}]*$",
-      "description": "An HTTP(S) identity or a namespace-qualified compact identity declared in the catalogue. Native validation expands namespaces and requires a supported HTTP(S) URI without credentials, then looks up an explicitly public concept. This schema alone cannot establish that lookup."
+      "description": "A supported HTTP(S)/URN identity or a namespace-qualified compact identity declared in the catalogue. Native validation expands namespaces, validates the supported data identity and looks up an explicitly public concept. Generated links use native source destinations, never a URN as an executable link. This schema alone cannot establish the lookup."
     },
     "profile": {
       "type": "object",

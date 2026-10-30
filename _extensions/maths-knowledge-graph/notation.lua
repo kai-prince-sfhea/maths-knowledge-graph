@@ -94,7 +94,10 @@ function M.apply(doc, ctx)
       Div=function(el) if includes(el, 'maths-notation-glossary') then used_authoring = true end end})
   end
   if ctx.data == nil then
-    if used_authoring then ctx.fail('notation authoring requires the notation registry option and a literal JSON registry') end
+    if ctx.page_defaults ~= nil or ctx.page_overrides ~= nil or ctx.preferences ~= nil then
+      ctx.fail('notation defaults, overrides and preferences require a notation registry')
+    end
+    if used_authoring then ctx.fail('notation authoring requires the notation registry option and a literal YAML or JSON registry') end
     return doc
   end
   local registry = strict(ctx.data, {version=true,profiles=true}, 'notation registry', ctx)
@@ -106,6 +109,8 @@ function M.apply(doc, ctx)
   if #records > 128 then ctx.fail('notation registry exceeds the 128-profile bound') end
   for _, value in ipairs(records) do
     value = strict(value, {id=true,concept=true,scope=true,roles=true,default=true,variants=true}, 'notation profile', ctx)
+    local scope = literal(value.scope, 256, 'notation profile scope', ctx)
+    if not ctx.scopes or ctx.scopes[scope] then
     local id = key(value.id, 'notation profile id', ctx)
     if profiles[id] then ctx.fail('notation profiles must have unique local keys') end
     local concept = ctx.identity(value.concept, 'notation concept')
@@ -113,7 +118,6 @@ function M.apply(doc, ctx)
     if not object or not object.public or (object.category ~= 'concept' and object.kind ~= 'concept') then
       ctx.fail('notation profiles require an explicitly public concept in the declarations')
     end
-    local scope = literal(value.scope, 256, 'notation profile scope', ctx)
     if scope ~= object.scope then ctx.fail('notation profile scope must match its declared concept scope') end
     local role_list = ctx.sequence(value.roles, 'notation roles')
     if #role_list < 1 or #role_list > 4 then ctx.fail('notation profiles require between one and four roles') end
@@ -142,15 +146,79 @@ function M.apply(doc, ctx)
     if not by_id[selected] then ctx.fail('notation default must name one of its declared variants') end
     local profile = {id=id,concept=concept,scope=scope,roles=role_list,variants=variants,by_id=by_id,default=selected,object=object}
     profiles[id] = profile; ordered[#ordered+1] = profile
+    end
+  end
+  local function selections(value, field)
+    local result = {}
+    if value == nil then return result end
+    value = ctx.mapping(value, field)
+    for id, variant in pairs(value) do
+      id = key(id, field .. ' profile', ctx)
+      local profile = profiles[id]
+      if not profile then ctx.fail(field .. ' requires a public profile in the selected notation registry') end
+      variant = key(variant, field .. ' variant', ctx)
+      if not profile.by_id[variant] then ctx.fail(field .. ' requires a declared variant of that profile') end
+      result[id] = variant
+    end
+    return result
+  end
+  local page_defaults = selections(ctx.page_defaults, 'notation-defaults')
+  local page_overrides = selections(ctx.page_overrides, 'notation-overrides')
+  local preferences = {}
+  if ctx.preferences ~= nil then
+    if ctx.preferences_validated ~= true then
+      ctx.fail('notation preferences require bounded duplicate-key-checked JSON from the confined reader')
+    end
+    local saved = strict(ctx.preferences, {version=true,token=true,enabled=true,choices=true}, 'notation preferences', ctx)
+    if type(saved.version) ~= 'number' or saved.version ~= 1 or saved.token ~= ctx.token or type(saved.enabled) ~= 'boolean' then
+      ctx.fail('notation preferences are invalid or stale; export choices from the current notation registry')
+    end
+    if saved.choices == nil then ctx.fail('notation preferences require a choices sequence') end
+    local choices = ctx.sequence(saved.choices, 'notation preference choices')
+    if #choices > 128 then ctx.fail('notation preferences exceed the 128-choice bound') end
+    local seen = {}
+    for _, choice in ipairs(choices) do
+      choice = strict(choice, {profile=true,concept=true,scope=true,variant=true}, 'notation preference choice', ctx)
+      local id, variant = key(choice.profile, 'notation preference profile', ctx), key(choice.variant, 'notation preference variant', ctx)
+      local concept = literal(choice.concept,4096,'notation preference concept',ctx)
+      if ctx.identity(concept, 'notation preference concept') ~= concept then ctx.fail('notation preferences require expanded concept identities') end
+      local scope = literal(choice.scope,256,'notation preference scope',ctx)
+      -- Length prefixes keep exact context identities unambiguous, including
+      -- punctuation in a scope. No preferences are matched by display words.
+      local identity = #concept .. ':' .. concept .. #scope .. ':' .. scope .. #id .. ':' .. id
+      if seen[identity] then ctx.fail('notation preferences contain a repeated context') end
+      seen[identity] = true
+      local profile = profiles[id]
+      if profile then
+        if profile.concept ~= concept or profile.scope ~= scope or not profile.by_id[variant] then
+          ctx.fail('notation preference context or variant conflicts with the current profile')
+        end
+        preferences[id] = variant
+      end
+      -- A same-registry choice for another selected page/scope is retained in
+      -- the portable file, but cannot affect an occurrence not validated here.
+    end
+  end
+  for _, profile in ipairs(ordered) do
+    profile.page_default = page_defaults[profile.id]
+    profile.override = page_overrides[profile.id]
+    profile.reader_choice = preferences[profile.id]
+    profile.author_default = profile.override or profile.page_default or profile.default
+    profile.initial = profile.override or profile.reader_choice or profile.page_default or profile.default
   end
   if not used_authoring then return doc end
   local html = quarto.doc.is_format('html')
   local js = quarto.doc.is_format('html:js')
   local controls, occurrences = false, false
   local function attrs(profile, variant)
-    return {['data-mk-profile']=profile.id, ['data-mk-concept']=profile.concept, ['data-mk-scope']=profile.scope,
-      ['data-mk-default']=profile.default, ['data-mk-token']=ctx.token, ['data-mk-variant']=variant.id,
+    local attributes = {['data-mk-profile']=profile.id, ['data-mk-concept']=profile.concept, ['data-mk-scope']=profile.scope,
+      ['data-mk-default']=profile.author_default, ['data-mk-site-default']=profile.default,
+      ['data-mk-initial']=profile.initial, ['data-mk-token']=ctx.token, ['data-mk-variant']=variant.id,
       ['data-mk-label']=variant.label, ['data-mk-concept-label']=profile.object.label}
+    if profile.page_default then attributes['data-mk-page-default'] = profile.page_default end
+    if profile.override then attributes['data-mk-override'] = profile.override end
+    if profile.reader_choice then attributes['data-mk-reader-choice'] = profile.reader_choice end
+    return attributes
   end
   local function occurrence(el)
     if not includes(el, 'maths-notation') then return el end
@@ -180,11 +248,14 @@ function M.apply(doc, ctx)
     -- EPUB is in Quarto's html alias, but is a static fallback here. Keep only
     -- the authored expression rather than relying on a reading system's hidden
     -- attribute handling for the alternatives.
-    if not js then return el end
+    if not js then
+      el.content = pandoc.List({pandoc.Math('InlineMath',expand(profile.by_id[profile.initial].tex,args))})
+      return el
+    end
     local content = pandoc.List()
     for _, variant in ipairs(profile.variants) do
       local attributes = attrs(profile, variant)
-      if variant.id ~= profile.default then attributes.hidden = ''; attributes['aria-hidden'] = 'true' end
+      if variant.id ~= profile.initial then attributes.hidden = ''; attributes['aria-hidden'] = 'true' end
       content:insert(pandoc.Span({pandoc.Math('InlineMath', expand(variant.tex,args))},pandoc.Attr('', {'maths-notation-variant'},attributes)))
     end
     el.content = content
@@ -205,14 +276,19 @@ function M.apply(doc, ctx)
     for _, profile in ipairs(ordered) do
       if not el.attributes.scope or profile.scope == el.attributes.scope then
         local source = profile.object.source
-        local target = source.path == ctx.source and '#'..source.anchor
-          or pandoc.path.make_relative(source.path,pandoc.path.directory(ctx.source)):gsub('\\','/') .. '#' .. source.anchor
+        local target
+        if ctx.destination then target = ctx.destination(source.path,source.anchor)
+        else target = source.path == ctx.source and '#'..source.anchor
+          or pandoc.path.make_relative(source.path,pandoc.path.directory(ctx.source)):gsub('\\','/') .. '#' .. source.anchor end
         local description = pandoc.List({pandoc.Para({pandoc.Str('Scope: '..profile.scope..'. Author-approved alternatives; mathematical equivalence is not verified.')})})
+        local origin = profile.override and 'required by this page' or profile.reader_choice and 'configured reader preference'
+          or profile.page_default and 'page default' or 'site default'
+        description:insert(pandoc.Para({pandoc.Str('Initial notation: '..profile.by_id[profile.initial].label..' ('..origin..').')}))
         local args, example = {}, {'x','y','z','w'}
         for index, role in ipairs(profile.roles) do args[role] = example[index] end
         local items = pandoc.List()
         for _, variant in ipairs(profile.variants) do
-          items:insert({pandoc.Plain({pandoc.Str(variant.label..(variant.id == profile.default and ' (authored default)' or '')..': '),
+          items:insert({pandoc.Plain({pandoc.Str(variant.label..(variant.id == profile.default and ' (site default)' or '')..': '),
             pandoc.Math('InlineMath',expand(variant.tex,args)),pandoc.Str('. '..variant.description)})})
         end
         description:insert(pandoc.BulletList(items))
@@ -238,7 +314,7 @@ function M.apply(doc, ctx)
   end
   doc.blocks = doc.blocks:walk({Span=occurrence,Div=glossary})
   if html and js and (occurrences or controls) then
-    quarto.doc.add_html_dependency({name='maths-knowledge-graph-notation',version='0.0.3',scripts={'notation.js'},stylesheets={'notation.css'}})
+    quarto.doc.add_html_dependency({name='maths-knowledge-graph-notation',version='0.0.9',scripts={'notation-preferences.js','notation.js'},stylesheets={'notation.css'}})
   end
   return doc
 end

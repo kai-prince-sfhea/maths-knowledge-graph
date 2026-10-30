@@ -2,10 +2,58 @@
 -- SPDX-License-Identifier: Apache-2.0
 -- Explicit mathematical view and finite native authoring over KG v0 data.
 -- Never infer truth, identity, proof validity or publication permission.
+local native_directory=pandoc.system.get_working_directory()
+local native_script=PANDOC_SCRIPT_FILE
 
 -- Quarto replaces error() with a logging helper in this filter phase.
 -- assert() must abort rather than let invalid declarations continue rendering.
 local function fail(message) assert(false, 'maths-knowledge-graph: ' .. message) end
+local function native_text(value)
+  return type(value)=='string' and utf8.len(value)~=nil and not value:find(utf8.char(0xfffd),1,true)
+end
+local function runtime_directory()
+  if not native_text(native_script) or not native_text(native_directory) then fail('native installed script path is unavailable; reinstall the complete extension') end
+  local script=native_script
+  if not pandoc.path.is_absolute(script) then script=pandoc.path.join({native_directory,script}) end
+  return pandoc.path.directory(pandoc.path.normalize(script))
+end
+-- Windows Quarto 1.11.5 can re-encode relative require paths through ANSI.
+-- Resolve only these installed siblings from the captured native script path;
+-- cache their table values just as require did, without guessing an encoding.
+local helper_names={['literal-yaml']=true,['relation-reuse']=true,templates=true,notation=true,['formal-proofs']=true,['am-catalogue']=true,graph=true}
+local helper_cache={}
+local function sibling(name)
+  if not helper_names[name] then fail('unsupported installed helper') end
+  if not helper_cache[name] then
+    local value=dofile(pandoc.path.join({runtime_directory(),name..'.lua'}))
+    if type(value)~='table' then fail('installed helper is incompatible; reinstall the complete extension') end
+    helper_cache[name]=value
+  end
+  return helper_cache[name]
+end
+local function native_location()
+  if not native_text(native_directory) or not pandoc.path.is_absolute(native_directory) then fail('native document directory is unavailable') end
+  local input=quarto.doc.input_file
+  if not native_text(input) then fail('native containing document is unavailable') end
+  if not pandoc.path.is_absolute(input) then input=pandoc.path.join({native_directory,input}) end
+  input=pandoc.path.normalize(input)
+  local root=pandoc.path.directory(input)
+  if quarto.project.directory then
+    root=pandoc.path.normalize(native_directory)
+    local offset=quarto.project.offset or '.'
+    if type(offset)~='string' or #offset>2048 then fail('native project offset is unavailable') end
+    offset=offset:gsub('\\','/')
+    if offset:sub(1,1)=='/' or offset:find('//',1,true) then fail('native project offset must be relative') end
+    for part in offset:gmatch('[^/]+') do
+      if part=='..' then
+        local parent=pandoc.path.directory(root)
+        if parent==root then fail('native project offset leaves the rendering context') end
+        root=parent
+      elseif part~='.' then fail('unsupported native project offset') end
+    end
+  end
+  return root,input
+end
 local function text(value)
   if value == nil then return nil end
   if type(value) == 'string' then return value end
@@ -52,15 +100,16 @@ local function local_path(value, field)
   end
   return result
 end
-local families = {definition='def', theorem='thm', lemma='lem', proposition='prp', corollary='cor', conjecture='cnj'}
+local families = {definition='def', theorem='thm', lemma='lem', proposition='prp', corollary='cor', conjecture='cnj',example='exm',exercise='exr'}
 local statement_kinds = {theorem=true, lemma=true, proposition=true, corollary=true, conjecture=true, axiom=true}
-local kinds = {definition=true, theorem=true, lemma=true, proposition=true, corollary=true, conjecture=true, axiom=true, assumption=true, proof=true}
+local kinds = {definition=true, theorem=true, lemma=true, proposition=true, corollary=true, conjecture=true,example=true,exercise=true, axiom=true, assumption=true, proof=true}
 local statuses = {unverified=true, ['author-reviewed']=true, ['formal-candidate']=true}
 local relation_kinds = {defines=true, requires=true, references=true, proves=true, assumes=true}
 
 -- Refuse excessive nesting before invoking a recursive JSON decoder. Braces
 -- inside strings (including escaped quotes) are data, not nesting.
-local function check_json_depth(raw)
+local function check_json_depth(raw, limit)
+  limit=limit or 64
   local depth, quoted, escaped = 0, false, false
   for i = 1, #raw do
     local char = raw:byte(i)
@@ -71,7 +120,7 @@ local function check_json_depth(raw)
     elseif char == 34 then quoted = true
     elseif char == 123 or char == 91 then
       depth = depth + 1
-      if depth > 64 then fail('JSON input exceeds the 64-level nesting limit') end
+      if depth > limit then fail('JSON input exceeds its supported nesting limit') end
     elseif char == 125 or char == 93 then depth = depth - 1 end
   end
 end
@@ -142,14 +191,53 @@ end
 local function process(doc)
   local options = mapping(doc.meta['maths-knowledge-graph'], 'configuration')
   for key in pairs(options) do
-    if key ~= 'enabled' and key ~= 'declarations' and key ~= 'notation' then fail('unknown configuration key; use enabled, declarations or notation') end
+    if key ~= 'enabled' and key ~= 'declarations' and key ~= 'notation' and key ~= 'scopes'
+      and key ~= 'notation-defaults' and key ~= 'notation-overrides' and key ~= 'notation-preferences'
+      and key ~= 'formal-proofs' and key ~= 'reuse-relations' and key~='import-accessible-maths' and key~='graph' then fail('unknown configuration key; use the documented maths-knowledge-graph options') end
   end
   if not boolean(options.enabled, true, 'enabled') then return doc end
-  local input = quarto.doc.input_file
-  local root = quarto.project.directory or pandoc.path.directory(input)
+  -- Native UTF-8 cwd/input plus the documented dot/up project offset preserve
+  -- the real containing source when Windows metadata roots contain ANSI bytes.
+  -- Generated destinations stay QMD links for Quarto's native output resolver.
+  local root,input = native_location()
+  local extension_dir=runtime_directory()
   local source = pandoc.path.make_relative(input, root):gsub('\\', '/')
   local_path(source, 'containing document')
-  local function read_json(option, default, field)
+  local am_context={root=root,source=source,runtimePath=extension_dir,fail=fail,
+    enabled=boolean(options['import-accessible-maths'],true,'import-accessible-maths')}
+  local am_module=sibling('am-catalogue')
+  local am_state=am_module.prepare(doc,am_context)
+  local am_options=doc.meta['accessible-maths']
+  local am_requested=am_options and am_options.catalogue==true
+  local function destination(path, anchor)
+    local_path(path, 'generated destination')
+    if type(anchor) ~= 'string' or anchor == '' or anchor:find('[%c%s]') then fail('generated destination needs a native anchor') end
+    local escaped=anchor:gsub('([^A-Za-z0-9._~-])',function(char)return string.format('%%%02X',char:byte())end)
+    if path == source then return '#' .. escaped end
+    -- Resolve both sides against one absolute native root. In Pandoc 3.10,
+    -- unsafe make_relative('first.qmd', '.') produces '../first.qmd'; absolute
+    -- siblings avoid that empty/current-directory ambiguity. Keep the QMD
+    -- target so Quarto can resolve custom output names and output formats.
+    local absolute_root=pandoc.path.is_absolute(root) and root or pandoc.path.join({pandoc.system.get_working_directory(),root})
+    return pandoc.path.make_relative(pandoc.path.join({absolute_root,path}),
+      pandoc.path.directory(pandoc.path.join({absolute_root,source})), true):gsub('\\','/') .. '#' .. escaped
+  end
+  local helper=pandoc.path.join({extension_dir,'confined-read.ts'})
+  local confined_cache={}
+  local function confined_read(filename, discover)
+    if filename and confined_cache[filename] then return confined_cache[filename] end
+    local absolute_root=pandoc.path.is_absolute(root) and root or pandoc.path.join({pandoc.system.get_working_directory(),root})
+    local request={version=1,root=absolute_root}
+    if discover then request.discover=discover else request.path=filename end
+    local ok, response=pcall(pandoc.pipe,os.getenv('QUARTO_BIN') or 'quarto',{'run',helper},pandoc.json.encode(request))
+    if not ok then fail('cannot read configured input; use an ordinary UTF-8 file inside the project, without symlinks or junctions (maximum 2 MiB)') end
+    local parsed;ok,parsed=pcall(pandoc.json.decode,response)
+    if not ok or type(parsed)~='table' or parsed.version~=1 then fail('configured input helper returned incompatible data; reinstall the complete extension') end
+    if parsed.path==pandoc.json.decode('null') or parsed.path==nil then return nil end
+    if type(parsed.raw)~='string' or #parsed.raw>2097152 or type(parsed.sha256)~='string' or #parsed.sha256~=64 then fail('configured input helper returned invalid data') end
+    confined_cache[parsed.path]=parsed;return parsed
+  end
+  local function read_data(option, default, field)
     local filename = default
     if option ~= nil then
     local configured = nonblank(option, field):gsub('\\', '/')
@@ -159,8 +247,8 @@ local function process(doc)
     -- Quarto rebases inherited file-valued metadata to the input directory.
     -- Normalize that effective path first, then admit only paths within root.
     -- pandoc.path.normalize intentionally retains '..' (symlink semantics).
-    -- Fold project-relative components explicitly for this trusted, lexical
-    -- read boundary; do not misrepresent it as real-path confinement.
+    -- Fold effective metadata components, then verify physical descendants in
+    -- the installed helper. Do not follow in-project symlink/junction aliases.
     local parts = {}
     local effective = pandoc.path.directory(source):gsub('\\', '/') .. '/' .. configured
     for part in effective:gmatch('[^/]+') do
@@ -172,28 +260,63 @@ local function process(doc)
     filename = table.concat(parts, '/')
     local_path(filename, field)
     end
-    local handle = io.open(pandoc.path.join({root, filename}), 'rb')
-    if not handle then fail('cannot read ' .. field .. '; create the configured local JSON file') end
-    local raw = handle:read(2097153); handle:close()
-    if not raw or #raw > 2097152 then fail(field .. ' exceeds the 2 MiB limit') end
-    if not raw:match('^%s*{') then fail(field .. ' requires a JSON object; convert YAML to literal JSON and set the option to that file') end
-    check_json_depth(raw)
-    local ok, data = pcall(pandoc.json.decode, raw)
-    if not ok then fail('cannot parse ' .. field .. '; use a valid JSON object') end
-    check_json_keys(raw)
-    return mapping(data, field), raw
+    local observed=confined_read(filename)
+    if not observed then fail('cannot read ' .. field .. '; create the configured local YAML or JSON file') end
+    local raw=observed.raw
+    if field=='notation-preferences' and (#raw>65536 or not raw:match('^%s*{')) then fail('notation-preferences requires a JSON object of at most 64 KiB') end
+    local data
+    if filename:lower():match('%.json$') or raw:match('^%s*{') then
+      if not raw:match('^%s*{') then fail(field .. ' requires a JSON object in a .json file; use .yml or .yaml for YAML data') end
+      check_json_depth(raw,field=='notation-preferences' and 8 or 64)
+      local ok; ok, data = pcall(pandoc.json.decode, raw)
+      if not ok then fail('cannot parse ' .. field .. '; use a valid JSON object') end
+      check_json_keys(raw)
+    else
+      data = sibling('literal-yaml').decode(raw, {fail=fail, json=pandoc.json.decode,
+        list=function() return pandoc.List() end, null=pandoc.json.decode('null')})
+    end
+    return mapping(data, field), raw, observed
   end
-  -- Pandoc preserves JSON arrays as Lists, including empty arrays; Quarto's
-  -- decoder returns plain tables, which erase the map/sequence distinction.
-  -- Catalogue values are literal data. A Markdown metadata reader silently
-  -- changes TeX escapes and emphasis. YAML support awaits a faithful reader.
-  local data = read_json(options.declarations, 'knowledge.json', 'declarations')
+  -- Preserve literal strings and map/list/scalar types, never parse catalogue
+  -- data as Markdown metadata. Reuse KG's canonical source when configured.
+  local configured = options.declarations
+  if configured == nil then
+    local kg = mapping(doc.meta['knowledge-graph'], 'knowledge-graph configuration')
+    configured = kg.declarations
+  end
+  local default,discovered = 'knowledge.yml',nil
+  if configured == nil then
+    discovered=confined_read(nil,{'knowledge.yml','knowledge.yaml','knowledge.json'})
+    if discovered then default=discovered.path end
+  end
+  local data
+  if configured==nil and not discovered and am_requested then
+    -- The authored AM declarations are already the authoritative source. Do
+    -- not require an empty duplicate catalogue merely to enable this view.
+    data={version=0,objects=pandoc.List(),relations=pandoc.List()}
+  else data=read_data(configured, default, 'declarations') end
   if type(data.version) ~= 'number' or data.version ~= 0 then fail('declarations version must be numeric 0') end
+  local selected_scopes
+  if options.scopes ~= nil then
+    selected_scopes = {}
+    local entries=sequence(options.scopes, 'scopes')
+    if #entries==0 or #entries>128 then fail('scopes requires between one and 128 distinct scope names') end
+    for _, value in ipairs(entries) do
+      local scope=nonblank(value, 'scopes entry')
+      if selected_scopes[scope] then fail('scopes entries must be distinct') end
+      selected_scopes[scope]=true
+    end
+  end
   local namespaces = mapping(data.namespaces, 'namespaces')
   local function identity(value, field)
     local result = nonblank(value, field)
     local prefix, suffix = result:match('^([%a][%w_-]*):(.*)$')
     if prefix and namespaces[prefix] then result = nonblank(namespaces[prefix], 'namespace') .. suffix end
+    if result:match('^urn:') then
+      local nid,nss=result:match('^urn:([A-Za-z0-9][A-Za-z0-9%-]*):(.*)$')
+      if not nid or #nid>32 or nss=='' or nss:find('[^A-Za-z0-9()+,%-%._:=@;$!%*\'%%/?#]') or nss:gsub('%%[A-Fa-f0-9][A-Fa-f0-9]',''):find('%',1,true) then fail(field..' requires a supported safe URN identifier') end
+      return result -- Data identity only; generated links always use native sources.
+    end
     local authority = result:match('^https?://([^/?#]+)')
     if not authority or authority:find('@', 1, true) or result:find('[%s%c\\<>"{}]') then
       fail(field .. ' requires an HTTP(S) URI without credentials or unsafe characters')
@@ -225,13 +348,15 @@ local function process(doc)
     end
     return not first and not value:find('%-%-') and value:sub(1,1) ~= '-' and value:sub(-1) ~= '-'
   end
-  local objects, links, current = {}, {}, {}
+  local objects, links, current, excluded_objects = {}, {}, {}, {}
   local document_language = text(doc.meta.lang) or 'en'
   local records = sequence(data.objects, 'objects')
   if #records > 10000 then fail('objects exceed the 10000-record limit') end
   for index, value in ipairs(records) do
     value = mapping(value, 'object')
     local field = 'objects[' .. index .. ']'
+    local scope = nonblank(value.scope, field .. '.scope')
+    if not selected_scopes or selected_scopes[scope] then
     local id = identity(value.id, field .. '.id')
     if objects[id] then fail(field .. ': duplicate normalized identity') end
     if value.review ~= nil and value.review ~= 'declared' then fail(field .. '.review must be declared; proposed records require author review before admission') end
@@ -243,7 +368,6 @@ local function process(doc)
     if category ~= 'concept' and category ~= 'assertion' then fail(field .. ': MK-0 accepts concept/assertion records only') end
     if category == 'assertion' and kind and not kinds[kind] then fail(field .. ': unsupported assertion math-kind') end
     if category == 'concept' and properties['math-kind'] ~= nil then fail(field .. ': math-kind belongs to an assertion') end
-    local scope = nonblank(value.scope, field .. '.scope')
     local origin = location(value.source, field .. '.source')
     local labels = mapping(value.labels, field .. '.labels')
     local label_count, fallback_language = 0, nil
@@ -296,13 +420,59 @@ local function process(doc)
       public=public, field=field, proofStatus=kind == 'proof' and (status or 'unverified') or nil, notation=notation}
     objects[id] = object
     if public and kind and local_origin then current[#current+1] = object end
+    else
+      -- Only record a safe normalized identity as deliberately out of scope.
+      -- Other off-scope schema families stay outside this mathematical view;
+      -- do not admit them or turn their invalid/unrelated fields into errors.
+      local ok,excluded_id=pcall(identity,value.id,field..'.id')
+      if ok then excluded_objects[excluded_id]=true end
+    end
+  end
+  -- Give canonical declarations their IDs before the producer captures this
+  -- same native AST. AM remains the validator/owner of its macro declarations.
+  local current_by_anchor={}
+  for _,object in ipairs(current) do
+    if current_by_anchor[object.source.anchor] then fail('two public mathematical objects share one native anchor') end
+    current_by_anchor[object.source.anchor]=object
+  end
+  local function predecorate(el)
+    local object=current_by_anchor[el.identifier]
+    if object then
+      local previous=el.attributes['semantic-id']
+      if previous and previous~=object.id then fail('native semantic-id conflicts with the normalized catalogue identity') end
+      el.attributes['semantic-id']=object.id;return el
+    end
+  end
+  doc.blocks=doc.blocks:walk({Div=predecorate,Span=predecorate,Header=predecorate,Code=predecorate,CodeBlock=predecorate,Link=predecorate,Image=predecorate,Table=predecorate,Figure=predecorate})
+  local am_packet=am_module.capture(doc,am_state,am_context)
+  local am_kinds={def='definition',thm='theorem',lem='lemma',cor='corollary',prp='proposition',cnj='conjecture',exm='example',exr='exercise'}
+  local imported_ids={}
+  for _,entry in ipairs(am_packet.records) do
+    if not selected_scopes or selected_scopes[entry.scope] then
+      local id=identity(entry.id,'Accessible Maths declaration identity')
+      local existing=objects[id]
+      if existing then
+        if not existing.public or existing.source.path~=source or existing.source.anchor~=entry.anchor or existing.scope~=entry.scope or existing.kind~=am_kinds[entry.type] then fail('Accessible Maths import conflicts with an existing canonical declaration') end
+        existing.am=entry
+      else
+        local object={id=id,kind=am_kinds[entry.type],category='assertion',scope=entry.scope,source={path=source,anchor=entry.anchor},canonical={path=source,anchor=entry.anchor},label=entry.label,public=true,field='Accessible Maths current-AST import',am=entry}
+        objects[id]=object;current[#current+1]=object
+      end
+      imported_ids[#imported_ids+1]=id
+    else
+      excluded_objects[identity(entry.id,'Accessible Maths declaration identity')]=true
+    end
   end
   local relations = sequence(data.relations, 'relations')
   if #relations > 20000 then fail('relations exceed the 20000-record limit') end
   local relation_ids = {}
+  local reuse_module=sibling('relation-reuse')
+  local reuse_state=reuse_module.prepare(options['reuse-relations'],{source=source,identity=identity,fail=fail,mapping=mapping,sequence=sequence,nonblank=nonblank})
   for index, value in ipairs(relations) do
     value = mapping(value, 'relation')
     local field = 'relations[' .. index .. ']'
+    local scope=nonblank(value.scope, field .. '.scope')
+    if not selected_scopes or selected_scopes[scope] then
     local id = identity(value.id, field .. '.id')
     if relation_ids[id] then fail(field .. ': duplicate normalized relation identity') end
     if objects[id] then fail(field .. '.id collides with an object identity; use distinct record identities') end
@@ -310,12 +480,12 @@ local function process(doc)
     if value.review ~= nil and value.review ~= 'declared' then fail(field .. '.review must be declared; proposed records require author review before admission') end
     local kind = nonblank(value.type, field .. '.type')
     if not relation_kinds[kind] then fail(field .. ': unsupported relation type in the MK-0 profile') end
-    local from = objects[identity(value.from, field .. '.from')]
-    local to = objects[identity(value.to, field .. '.to')]
-    if not from or not to then fail(field .. ': unresolved endpoint; declare both endpoint objects') end
+    local endpoints=reuse_module.selected_endpoints(objects,excluded_objects,
+      identity(value.from,field..'.from'),identity(value.to,field..'.to'),{field=field,fail=fail})
     local public = boolean(value.public, false, field .. '.public')
-    nonblank(value.scope, field .. '.scope')
     local origin = location(value.source, field .. '.source')
+    if endpoints.status=='selected' then
+    local from,to=endpoints.from,endpoints.to
     if kind == 'defines' and (from.kind ~= 'definition' or to.kind ~= 'concept') then fail(field .. ': defines requires definition to concept') end
     if kind == 'requires' and to.kind ~= 'concept' then fail(field .. ': requires must target a concept') end
     if kind == 'proves' and (from.kind ~= 'proof' or not statement_kinds[to.kind]) then fail(field .. ': proves requires proof to statement') end
@@ -324,13 +494,28 @@ local function process(doc)
     end
     if public and (not from.public or not to.public) then fail(field .. ': public relation requires public endpoints') end
     if public and from.public and to.public then
+      local reused=reuse_module.apply(reuse_state,{id=id,field=field,kind=kind,scope=scope,from=from,to=to,source=origin},value)
+      -- An explicit object occurrence on this page is a reuse of that object,
+      -- not permission to move every relation from its canonical context here.
+      -- Keep all role/publication checks above, but leave a relation authored
+      -- wholly in other canonical contexts to KG and the containing page view.
+      -- Otherwise one reused concept can turn an ordinary same-page canonical
+      -- dependency into a spurious cross-page interactive association.
+      local inherited_elsewhere = origin.path ~= source
+        and from.canonical.path ~= source and to.canonical.path ~= source
+      if reused then links[#links+1]=reused
+      elseif not inherited_elsewhere then
       if (from.source.path == source or to.source.path == source) and from.source.path ~= to.source.path then
         fail(field .. ': MK-0 relations must stay in the containing document; cross-page mapping is not implemented')
       end
-      links[#links+1] = {id=id, field=field, kind=kind, from=from, to=to, source=origin}
+      links[#links+1] = {id=id, field=field, kind=kind, scope=scope,from=from, to=to, source=origin}
+      end
+    end
+    end
     end
   end
-  doc = require('./templates').expand(doc, {fail=fail, nonblank=nonblank, mapping=mapping, sequence=sequence})
+  reuse_module.finish(reuse_state)
+  doc = sibling('templates').expand(doc, {fail=fail, nonblank=nonblank, mapping=mapping, sequence=sequence})
   local anchors, used_notation = {}, false
   local function collect(el)
     if (el.t == 'Span' and el.classes:includes('maths-notation'))
@@ -405,12 +590,16 @@ local function process(doc)
       local description = pandoc.List({pandoc.Para({pandoc.Str(object.kind .. ' — ' .. object.scope .. '. Author-declared; mathematical correctness is not established.')})})
       description:insert(pandoc.Para({pandoc.Str('Identity: '), pandoc.Code(object.id)}))
       if object.canonical.path ~= source then
-        local canonical_path = pandoc.path.make_relative(object.canonical.path, pandoc.path.directory(source)):gsub('\\', '/')
-        description:insert(pandoc.Para({pandoc.Link({pandoc.Str('Authored canonical source')}, canonical_path .. '#' .. object.canonical.anchor),
+        description:insert(pandoc.Para({pandoc.Link({pandoc.Str('Authored canonical source')}, destination(object.canonical.path,object.canonical.anchor)),
           pandoc.Str(' (catalogue destination; not independently validated by this page render).')}))
       end
       if object.proofStatus then description:insert(pandoc.Para({pandoc.Str('Proof status: ' .. object.proofStatus .. ' (authored status; no formal checking).')})) end
       if object.notation then description:insert(pandoc.Para({pandoc.Str('Authored notation: '), pandoc.Math('InlineMath', object.notation)})) end
+      if object.am then
+        local lexical=object.am.lexicalScope
+        description:insert(pandoc.Para({pandoc.Str('Imported current Accessible Maths declaration. Author-reviewed publication; mathematical correctness is not established. Lexical scope: '),pandoc.Code(lexical.kind=='document' and 'document' or lexical.anchor),pandoc.Str('.')}))
+        if object.am.notation then description:insert(pandoc.Para({pandoc.Str('Authored macro: '),pandoc.Code('\\'..object.am.notation.command),pandoc.Str(' (retains its declared lexical scope; not an approved global substitution profile).')})) end
+      end
       local relationships = pandoc.List()
       for _, relation in ipairs(outgoing[object.id] or {}) do
         relationships:insert({pandoc.Plain({pandoc.Str(relation.kind .. ': '), pandoc.Link({pandoc.Str(relation.to.label)}, '#' .. relation.to.source.anchor)})})
@@ -422,6 +611,7 @@ local function process(doc)
       entries:insert({{pandoc.Link({pandoc.Str(object.label)}, '#' .. object.source.anchor)}, {description}})
     end
     local blocks = pandoc.List({pandoc.Para({pandoc.Str('Explicit public declarations for this containing document only. Other pages and undeclared relationships are outside this view; missing entries do not imply absence.')})})
+    if am_requested and am_packet.status~='complete' and am_packet.status~='empty' then blocks:insert(pandoc.Para({pandoc.Str('Accessible Maths import is '..am_packet.status..'. Its reviewed catalogue is unavailable for this view; existing explicit declarations remain available.')})) end
     if #entries > 0 then blocks:insert(pandoc.DefinitionList(entries))
     else blocks:insert(pandoc.Para({pandoc.Str('No public mathematical declarations match this document and scope.')})) end
     el.content = blocks; return el
@@ -454,10 +644,37 @@ local function process(doc)
   doc.blocks = doc.blocks:walk({Div=decorate, Span=decorate, Header=decorate, Code=decorate,
     CodeBlock=decorate, Link=decorate, Image=decorate, Table=decorate, Figure=decorate})
   local registry, registry_raw
-  if options.notation ~= nil then registry, registry_raw = read_json(options.notation, nil, 'notation') end
-  doc = require('./notation').apply(doc, {data=registry, token=registry_raw and pandoc.utils.sha1(registry_raw),
+  if options.notation ~= nil then registry, registry_raw = read_data(options.notation, nil, 'notation') end
+  local preferences, preferences_raw
+  if options['notation-preferences'] ~= nil then
+    preferences,preferences_raw=read_data(options['notation-preferences'],nil,'notation-preferences')
+    if #preferences_raw>65536 or not preferences_raw:match('^%s*{') then fail('notation-preferences requires a JSON object of at most 64 KiB') end
+    local depth,quoted,escaped=0,false,false
+    for index=1,#preferences_raw do local byte=preferences_raw:byte(index)
+      if quoted then if escaped then escaped=false elseif byte==92 then escaped=true elseif byte==34 then quoted=false end
+      elseif byte==34 then quoted=true elseif byte==123 or byte==91 then depth=depth+1;if depth>8 then fail('notation-preferences exceeds eight nesting levels') end
+      elseif byte==125 or byte==93 then depth=depth-1 end
+    end
+  end
+  doc = sibling('notation').apply(doc, {data=registry, token=registry_raw and pandoc.utils.sha1(registry_raw),
     objects=objects, identity=identity, fail=fail, mapping=mapping, sequence=sequence,
-    nonblank=nonblank, text=text, source=source, used_authoring=used_notation})
+    nonblank=nonblank, text=text, source=source, used_authoring=used_notation, scopes=selected_scopes,
+    destination=destination, page_defaults=options['notation-defaults'],page_overrides=options['notation-overrides'],
+    preferences=preferences,preferences_validated=preferences~=nil})
+  doc = sibling('formal-proofs').apply(doc,{options=options['formal-proofs'],fail=fail,mapping=mapping,
+    boolean=boolean,nonblank=nonblank,text=text,source=source,anchors=anchors,
+    root=root,visible=function()return sibling('graph').visible_anchors(doc)end,withheld=sibling('graph').withheld,
+    runtimePath=extension_dir,sourceHash=function()return confined_read(source).sha256 end})
+  if am_requested or options['import-accessible-maths']~=nil then
+    local final_packet=am_module.capture(doc,am_state,am_context)
+    am_module.consistent(am_packet,final_packet,am_context)
+    for _,entry in ipairs(final_packet.records) do if objects[entry.id] and objects[entry.id].am then objects[entry.id].am=entry end end
+    final_packet.selectedIds=imported_ids
+    doc=am_module.attach(doc,final_packet,am_context)
+  end
+  doc=sibling('graph').apply(doc,{options=options.graph,root=root,input=input,source=source,runtimePath=extension_dir,
+    current=current,links=links,dependencies=confined_cache,amApiPath=am_state.status=='available' and am_state.path or nil,
+    language=document_language,fail=fail,nonblank=nonblank,mapping=mapping,boolean=boolean})
   return doc
 end
 

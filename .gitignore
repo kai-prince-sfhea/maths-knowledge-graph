@@ -3,6 +3,7 @@
 _site/
 _book/
 *.html
+!_extensions/maths-knowledge-graph/kernel-host.html
 *.docx
 *.pdf
 *.epub

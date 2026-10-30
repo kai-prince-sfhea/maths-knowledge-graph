@@ -1,6 +1,6 @@
 title: Maths Knowledge Graph
 author: Kai Prince
-version: 0.0.3
+version: 0.0.9
 quarto-required: '>=1.11.5'
 contributes:
   filters:

@@ -1,5 +1,5 @@
 ---
-title: "Maths Knowledge Graph: positive squares"
+title: "Maths Knowledge Graph: a first linked mathematical article"
 lang: en-GB
 filters: [maths-knowledge-graph]
 format:
@@ -7,10 +7,32 @@ format:
   docx: default
 ---
 
-This original synthetic article demonstrates explicit mathematical declarations,
-an assumption, two associated proofs and a static glossary. The declarations
-are in the local literal-JSON `knowledge.json` catalogue. They do not establish independent
-mathematical review or formal verification.
+This tutorial connects ordinary mathematical writing to a small explicit
+catalogue. Render the article, follow a glossary link, then change one label.
+The later sections explain its assumption and two authored proof relations.
+
+## 1. Render the article
+
+In this source folder, open `example.qmd` and use your editor's **Render** or
+**Preview** command. From a terminal you can instead run:
+
+```sh
+quarto render example.qmd --to html
+```
+
+If working in another folder, first follow `README.md` to install the extension,
+then copy **both** `example.qmd` and `knowledge.json` there. A GitHub installation
+uses `filters: [kai-prince-sfhea/maths-knowledge-graph]`; this source example uses
+the local `filters: [maths-knowledge-graph]` route.
+
+The result should show a numbered definition and theorem, followed by a
+**Mathematical glossary** with links back to their source text. No AI model or
+companion extension is required for this first render.
+
+## 2. Read the native mathematical source
+
+The next blocks use ordinary Quarto theorem syntax. The catalogue supplies
+explicit identities and relations; it does not change their mathematical text.
 
 ::: {#def-square name="Square of a real number" am-macro="amSquare" am-args="value" am-intent="square($value)" am-tex="(#1)^2"}
 The [square]{#concept-square} of a real number $x$ is the product $x\cdot x$,
@@ -25,15 +47,49 @@ The term is defined in @def-square. [Read the assumptions](#assumption-real),
 [follow the proof by signs](#prf-sign), or
 [follow the proof using absolute value](#prf-absolute) for @thm-square.
 
+## 3. Follow the mathematical glossary
+
+::: {#maths-glossary .maths-glossary}
+:::
+
+Select **Positive squares** in this glossary to return to the theorem. Follow
+**Square** to its defining term. The entries come from the catalogue's explicit
+public objects and real source anchors, not matching words elsewhere on the page.
+
+## 4. Change one label and render again
+
+Open `knowledge.json` and find the object whose `id` is
+`math:positive-square`. Change its English label from `Positive squares` to
+`Square positivity`, then render `example.qmd` again. The glossary label should
+change, while the theorem retains its authored **Positive squares** name and
+the same mathematical statement. Leave its ID and source anchor unchanged.
+
+If a catalogue-only edit does not refresh in Preview, run Render again. The
+README also explains the local candidate's literal YAML catalogue support;
+there is no author-written conversion script.
+
+## 5. Inspect the authored assumption and proofs
+
+The catalogue links the theorem to the following assumption with `assumes` and
+links each proof to its statement with `proves`. Each proof's status is
+`unverified`: these are authored associations, not formal checking results.
+You can inspect their IDs, source anchors and relations in `knowledge.json`.
+
+### Assumption
+
 ::: {#assumption-real .am-assumption am-summary="Assumption: a nonzero real input"}
 The input $x$ belongs to the ordered field of real numbers and satisfies $x\ne0$.
 The nonzero condition excludes the case $x^2=0$.
 :::
 
+### Proof by signs
+
 ::: {#prf-sign .proof am-summary="Proof by signs"}
 If $x>0$, the product $x\cdot x$ is positive. If $x<0$, then $-x>0$,
 so $x^2=(-x)\cdot(-x)>0$. A nonzero real number has one of these two signs.
 :::
+
+### Proof using absolute value
 
 ::: {#prf-absolute .proof am-summary="Proof using absolute value"}
 For a nonzero real number $x$, its absolute value satisfies $|x|>0$.
@@ -41,10 +97,71 @@ The product of two positive real numbers is positive, so $|x|^2>0$.
 Since $|x|^2=x^2$, the conclusion follows.
 :::
 
-## Mathematical glossary
+## 6. Try the paired QMD-only authoring route
 
-::: {#maths-glossary .maths-glossary}
+If you have also installed the local Accessible Maths 0.0.9 candidate, create
+a new `native-glossary.qmd` in your own project. Copy the small article below,
+then use ordinary **Render**. This route needs no separate knowledge file:
+
+```markdown
+---
+title: My native mathematical glossary
+filters: [maths-knowledge-graph, accessible-maths]
+accessible-maths:
+  catalogue: true
+maths-knowledge-graph:
+  scopes: [algebra]
+---
+
+::: {#def-native-square name="Square" semantic-id="https://example.org/maths/native-square" am-review="author-reviewed" am-public="true" am-scope="algebra"}
+For a real number $x$, its square is $x\cdot x$.
 :::
+
+::: {.maths-glossary}
+:::
+```
+
+Follow **Square** back to the definition. Edit its `name` in that QMD and render
+again: the glossary updates on that same render. The attributes explicitly
+declare identity, review, publication and knowledge context; they do not prove
+the mathematical statement. Keep the filter order shown. Use owner-qualified
+filter names for GitHub installations; the currently published versions are
+earlier than this local candidate pair.
+
+To add navigation, install the compatible local Knowledge Graph Extraction
+candidate in that project and select its filter after the two shown above:
+
+```yaml
+filters: [maths-knowledge-graph, accessible-maths, knowledge-graph-extraction]
+```
+
+Render the whole project. A separate **Mathematics** graph appears after the
+mathematical content, and KG's website search includes its public records. Drag
+a node or use the graph's text and keyboard controls. The README explains graph
+names, placement and search options. Your original `example.qmd` remains a
+standalone catalogue tutorial and needs no companion for its normal render.
+
+## 7. Choose your next step
+
+Select Accessible Maths **after** Maths Knowledge Graph if you want these
+declared proof and assumption associations to become authored disclosures.
+Knowledge Graph Extraction adds a separate project-wide graph and navigation;
+it is optional for this page-local tutorial. See `README.md` for the complete
+filter order and shared-catalogue configuration.
+
+For approved reader notation choices and cross-page preferences, try the
+[`examples/notation` website](examples/notation/index.qmd). The README explains
+[page defaults, required notation and portable preferences](README.md#page-defaults-required-notation-and-portable-preferences),
+the [optional controlled-English proof candidate](README.md#optional-controlled-english-proof-candidates)
+experiment, [ordinary-prose proposals and constructive subproofs](README.md#ordinary-prose-private-proposals-and-reviewed-public-output),
+and [qualified relation reuse](README.md#qualified-relation-reuse).
+These are separate next steps; the tutorial above needs none of them.
+
+You can also render the full authored content to Word:
+
+```sh
+quarto render example.qmd --to docx
+```
 
 [The catalogue is explicit; matching words do not create new identities.]{#catalogue-note}
 

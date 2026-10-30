@@ -1,11 +1,39 @@
 /* Copyright 2026 Kai Prince; SPDX-License-Identifier: Apache-2.0 */
 .maths-notation-variant[hidden] { display: none !important; }
-.maths-notation-panel { border: 1px solid currentColor; padding: .75rem; margin: .5rem 0 1rem; }
+.maths-notation-panel {
+  border: 1px solid var(--mk-panel-border-color, currentColor);
+  border-radius: var(--mk-panel-radius, 0);
+  padding: var(--mk-panel-padding, .75rem);
+  margin: var(--mk-panel-spacing, .5rem 0 1rem);
+}
 .maths-notation-panel > label, .maths-notation-panel > select { display: block; margin-bottom: .5rem; }
+.maths-notation-panel select, .maths-notation-panel button {
+  min-block-size: max(2.75rem, 44px);
+  padding: .375rem .5rem;
+  font: inherit;
+  color: inherit;
+  background-color: var(--mk-control-background, var(--bs-body-bg, Canvas));
+  border: 1px solid var(--mk-panel-border-color, currentColor);
+  border-radius: var(--mk-control-radius, .25rem);
+}
 .maths-notation-panel select { max-width: 100%; }
-.maths-notation-panel button { margin: .25rem .5rem .25rem 0; }
-.maths-notation-panel :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.maths-notation-panel button {
+  max-inline-size: calc(100% - .5rem);
+  margin: .25rem .5rem .25rem 0;
+  overflow-wrap: anywhere;
+}
+.maths-notation-panel :focus-visible { outline: 3px solid var(--mk-focus-color, currentColor); outline-offset: 3px; }
+.maths-notation-persistence input { margin-inline-end: .375rem; vertical-align: middle; }
 .maths-notation-status { margin-top: .5rem; margin-bottom: 0; }
+@media (forced-colors: active) {
+  .maths-notation-panel { border-color: CanvasText; }
+  .maths-notation-panel select, .maths-notation-panel button {
+    color: CanvasText;
+    background-color: Canvas;
+    border-color: CanvasText;
+  }
+  .maths-notation-panel :focus-visible { outline-color: Highlight; }
+}
 @media print {
   .maths-notation-controls { display: none !important; }
   .maths-notation-variant[hidden] { display: none !important; }

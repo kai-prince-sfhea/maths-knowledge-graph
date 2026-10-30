@@ -1,0 +1,12 @@
+/* Copyright 2026 Kai Prince. SPDX-License-Identifier: Apache-2.0 */
+.mkg-proof-controls { border: 1px solid currentColor; border-radius: .4rem; padding: 1rem; margin-block: 1rem; color: inherit; }
+.mkg-proof-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.mkg-proof-controls button { min-block-size: 2.75rem; min-inline-size: 2.75rem; margin: .25rem; padding: .4rem .65rem; border: 1px solid currentColor; border-radius: .25rem; font: inherit; color: inherit; background: var(--bs-body-bg, Canvas); }
+.mkg-proof-controls button:focus-visible,.mkg-proof-controls input:focus-visible,.mkg-proof-controls summary:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.mkg-proof-controls label { display: block; margin-block: .75rem; }
+.mkg-proof-controls input[type=text],.mkg-proof-controls input[type=file] { max-inline-size: 100%; }
+.mkg-proof-controls pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.mkg-proof-controls dd { overflow-wrap: anywhere; }
+@media (forced-colors: active) { .mkg-proof-controls button { color: ButtonText; background: ButtonFace; border-color: ButtonText; } }
+@media (prefers-reduced-motion: reduce) { .mkg-proof-controls * { transition: none; animation: none; } }
+@media print { .mkg-proof-controls { display: none !important; } }
