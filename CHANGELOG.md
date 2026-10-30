@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.10 — proof and notation presentation, 30 October 2026
+
+Keep the pending proof-engine Check button focusable. On completion, return focus from Cancel only while Cancel still owns it. Preserve typed source/candidate checks, request ownership, unavailable/cancelled statuses and all kernel/source-mapping qualifications.
+
+Local development candidate; no push or release. Keep generated encoding-name
+code readable through scoped theme styling and preserve native definition-list
+semantics. Generated HTML certificates and names use a native disclosure while
+the authored proof and review/kernel qualifications remain visible; ordinary
+non-HTML output and browser print retain the certificate material. Proof regions
+have contextual names and headings derived from their containing section.
+Notation file controls fit their panel, and feedback is placed beside the
+originating action while global reset/persistence semantics remain unchanged.
+File-picker buttons have explicit foreground/background styling. Pure Node
+regressions do not establish native, browser, mathematical or human acceptance.
+Owned HTML controlled-proof and certificate blocks have contextual region names,
+explicit keyboard access and visible focus outlines; native code text and
+non-HTML output are retained.
+The exact AM 0.0.10 five-file API package is admitted alongside 0.0.8/0.0.9;
+the four API modules match 0.0.9 bytes, while the manifest revision is separately
+pinned. Mixed, missing and changed physical/API receipt sets remain refused.
+
 ## 0.0.9 — source-clause planning and typed proof profiles, 28 October 2026
 
 Local development candidate; no push or release.

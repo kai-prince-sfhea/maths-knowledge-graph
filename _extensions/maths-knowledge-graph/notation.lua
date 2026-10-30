@@ -314,7 +314,7 @@ function M.apply(doc, ctx)
   end
   doc.blocks = doc.blocks:walk({Span=occurrence,Div=glossary})
   if html and js and (occurrences or controls) then
-    quarto.doc.add_html_dependency({name='maths-knowledge-graph-notation',version='0.0.9',scripts={'notation-preferences.js','notation.js'},stylesheets={'notation.css'}})
+    quarto.doc.add_html_dependency({name='maths-knowledge-graph-notation',version='0.0.10',scripts={'notation-preferences.js','notation.js'},stylesheets={'notation.css'}})
   end
   return doc
 end

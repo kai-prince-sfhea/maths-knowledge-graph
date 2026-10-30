@@ -17,6 +17,9 @@
   border-radius: var(--mk-control-radius, .25rem);
 }
 .maths-notation-panel select { max-width: 100%; }
+.maths-notation-panel :is(input,select,button) { box-sizing: border-box; min-inline-size: 0; }
+.maths-notation-panel input[type=file] { max-inline-size: 100%; color: inherit; background: transparent; font: inherit; }
+.maths-notation-panel input[type=file]::file-selector-button { min-block-size: 2.75rem; max-inline-size: 100%; padding: .375rem .5rem; margin-inline-end: .5rem; font: inherit; color: inherit; background: var(--mk-control-background, var(--bs-body-bg, Canvas)); border: 1px solid var(--mk-panel-border-color, currentColor); border-radius: var(--mk-control-radius, .25rem); }
 .maths-notation-panel button {
   max-inline-size: calc(100% - .5rem);
   margin: .25rem .5rem .25rem 0;
@@ -27,7 +30,7 @@
 .maths-notation-status { margin-top: .5rem; margin-bottom: 0; }
 @media (forced-colors: active) {
   .maths-notation-panel { border-color: CanvasText; }
-  .maths-notation-panel select, .maths-notation-panel button {
+  .maths-notation-panel select, .maths-notation-panel button, .maths-notation-panel input[type=file]::file-selector-button {
     color: CanvasText;
     background-color: Canvas;
     border-color: CanvasText;

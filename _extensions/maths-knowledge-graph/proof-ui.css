@@ -1,12 +1,28 @@
 /* Copyright 2026 Kai Prince. SPDX-License-Identifier: Apache-2.0 */
 .mkg-proof-controls { border: 1px solid currentColor; border-radius: .4rem; padding: 1rem; margin-block: 1rem; color: inherit; }
 .mkg-proof-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
-.mkg-proof-controls button { min-block-size: 2.75rem; min-inline-size: 2.75rem; margin: .25rem; padding: .4rem .65rem; border: 1px solid currentColor; border-radius: .25rem; font: inherit; color: inherit; background: var(--bs-body-bg, Canvas); }
+.mkg-proof-controls button { box-sizing: border-box; min-block-size: 2.75rem; min-inline-size: 0; max-inline-size: 100%; margin: .25rem; padding: .4rem .65rem; border: 1px solid currentColor; border-radius: .25rem; font: inherit; color: inherit; background: var(--bs-body-bg, Canvas); overflow-wrap: anywhere; }
 .mkg-proof-controls button:focus-visible,.mkg-proof-controls input:focus-visible,.mkg-proof-controls summary:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
 .mkg-proof-controls label { display: block; margin-block: .75rem; }
-.mkg-proof-controls input[type=text],.mkg-proof-controls input[type=file] { max-inline-size: 100%; }
+.mkg-proof-controls input[type=text],.mkg-proof-controls input[type=file] { box-sizing: border-box; min-inline-size: 0; max-inline-size: 100%; color: inherit; background: var(--bs-body-bg, Canvas); font: inherit; }
+.mkg-proof-controls input[type=file]::file-selector-button { min-block-size: 2.75rem; padding: .4rem .65rem; font: inherit; color: inherit; background: var(--bs-body-bg, Canvas); border: 1px solid currentColor; border-radius: .25rem; }
 .mkg-proof-controls pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .mkg-proof-controls dd { overflow-wrap: anywhere; }
+.mkg-proof-controls :is(h1,h2,h3,h4,h5,h6) { overflow-wrap: anywhere; }
+.mkg-encoding-names :is(dt,dd) code { color: inherit; background: transparent; overflow-wrap: anywhere; }
+.mkg-proof-code { max-inline-size: 100%; overflow: auto; }
+.mkg-proof-code:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.mkg-certificate { border: 1px solid currentColor; border-radius: .4rem; margin-block: 1rem; }
+.mkg-certificate > summary { cursor: pointer; min-block-size: 2.75rem; padding: .6rem .75rem; }
+.mkg-certificate-body { padding: .25rem .75rem .75rem; }
+.mkg-certificate > summary:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
 @media (forced-colors: active) { .mkg-proof-controls button { color: ButtonText; background: ButtonFace; border-color: ButtonText; } }
 @media (prefers-reduced-motion: reduce) { .mkg-proof-controls * { transition: none; animation: none; } }
-@media print { .mkg-proof-controls { display: none !important; } }
+@media print {
+  .mkg-proof-controls { display: none !important; }
+  .mkg-certificate { border: 0; }
+  .mkg-certificate > summary { display: block; min-block-size: 0; padding: 0; list-style: none; }
+  .mkg-certificate-body { display: block !important; padding: 0; }
+  .mkg-certificate::details-content { display: block !important; content-visibility: visible !important; block-size: auto !important; }
+  .mkg-proof-code { max-inline-size: none; overflow: visible; }
+}

@@ -7,13 +7,22 @@ Authors keep native theorem blocks, mathematical notation and cross-references.
 Readers can follow the glossary to the original text and distinguish a statement,
 its conditions and its associated proofs.
 
-The **0.0.9 experimental development source** uses a local catalogue and explicitly
+The **0.0.10 experimental development source** uses a local catalogue and explicitly
 approved notation alternatives. It does not infer mathematical truth or link
 matching words. Optional features include a finite associativity template,
 portable notation choices and a controlled-English proof candidate compiler.
 An explicitly configured external kernel can check a generated certificate;
 that result does not certify its correspondence to the original mathematics.
 Knowledge Graph Extraction owns whole-project graph assembly.
+This revision gives proof regions contextual names and section-aware headings,
+keeps generated certificates/names in a native HTML disclosure, and improves
+dark-theme encoding labels and narrow notation imports. Notation feedback stays
+with the control used; reset still restores every profile. Selected HTML proof
+source and generated certificate code have contextual names, explicit keyboard
+focus and a visible focus outline for scrolling. These presentation
+changes retain the original proof and its qualifications, explicit consent and
+the same notation/proof contracts. Pure Node checks cover the changed helpers;
+native output and browser accessibility acceptance remain separate.
 Native helper and catalogue paths use Quarto's native document context. This
 avoids depending on differently encoded Windows project metadata or relative
 module search paths. It does not change publication, scope or source-review
@@ -839,6 +848,8 @@ separate for every profile.
 
 ### Optional external Sandbox-compatible kernel
 
+Check retains keyboard focus while a proof-engine request is pending. When Cancel finishes and still owns focus, focus returns to Check. A reader who moved elsewhere keeps focus. Source mapping, cancellation and kernel-result qualifications remain unchanged.
+
 Certificate generation needs only the installed Quarto runtime; no author Node
 installation, model or proof engine is required. Reader checking is a separate
 opt-in deployment. Supply a compatible Argumentation Sandbox distribution with
@@ -1246,7 +1257,7 @@ worker warnings are retained in the private report. Eight no-host browser groups
 passed for current review controls, imports, downloads, cancellation and mobile
 width. No model was downloaded or executed for that earlier verification.
 
-For the current local 0.0.9 candidate, 108 portable formal checks, the full
+For the 0.0.9 source-clause candidate, 108 portable formal checks, the full
 native regression and the actual 76-page/thirteen-graph combined project render
 pass. A separate fourteen-case actual installed author-command test admits every
 model response through the schema and host checks. Only four cases meet every

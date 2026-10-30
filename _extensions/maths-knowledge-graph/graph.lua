@@ -98,7 +98,7 @@ function M.apply(doc,ctx)
   if options.navigation then
     if options.placement=='placeholder' then doc.blocks=doc.blocks:walk({Div=function(el)if el.classes:includes('maths-graph')then el.content=content();return el end end})
     elseif published then doc.blocks:insert(pandoc.Div(content(),pandoc.Attr('',{'maths-graph'}))) end
-    if published then quarto.doc.add_html_dependency({name='maths-knowledge-graph-navigation',version='0.0.9',stylesheets={'maths-graph.css'}}) end
+    if published then quarto.doc.add_html_dependency({name='maths-knowledge-graph-navigation',version='0.0.10',stylesheets={'maths-graph.css'}}) end
   end
   return doc
 end

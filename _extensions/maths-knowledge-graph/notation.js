@@ -14,17 +14,17 @@
     const persistenceControls = [];
     let statusNode, persist = false, storageAvailable = true, serial = 0, action = 0;
     const context = el => preferences.contextKey({concept:el.dataset.mkConcept,scope:el.dataset.mkScope,profile:el.dataset.mkProfile});
-    const announce = message => { if (statusNode && statusNode.textContent !== message) statusNode.textContent = message; };
+    const announce = (message, target = statusNode) => { if (target && target.textContent !== message) target.textContent = message; };
     const element = (tag, text, className) => {
       const node = document.createElement(tag);
       if (text !== undefined) node.textContent = text;
       if (className) node.className = className;
       return node;
     };
-    const storageFailure = (message = 'Browser storage is unavailable. Choices still work on this page and can be exported. Previously saved choices may return after navigation.') => {
+    const storageFailure = (message = 'Browser storage is unavailable. Choices still work on this page and can be exported. Previously saved choices may return after navigation.', target = statusNode) => {
       storageAvailable = false; persist = false;
       for (const checkbox of persistenceControls) { checkbox.checked = false; checkbox.disabled = true; }
-      announce(message);
+      announce(message, target);
     };
     // Preflight all contexts and alternatives before changing any native output.
     // A failed/mixed helper or stale page keeps its rendered AST selection.
@@ -94,10 +94,10 @@
       choices:[...choices].map(([key,variant]) => {
         const [concept,scope,profile] = JSON.parse(key); return {profile,concept,scope,variant};
       })});
-    const save = failureMessage => {
+    const save = (failureMessage, target = statusNode) => {
       if (!persist || !storageAvailable) return false;
       try { localStorage.setItem(STORAGE_KEY,preferences.encode(exportData())); return true; }
-      catch { storageFailure(failureMessage); return false; }
+      catch { storageFailure(failureMessage, target); return false; }
     };
     const apply = (key,readerChoice) => {
       const group = groups.get(key);
@@ -118,6 +118,10 @@
     for (const host of roots.filter(el => el.classList.contains('maths-notation-controls'))) {
       const key = context(host), group = groups.get(key);
       const panel = element('div',undefined,'maths-notation-panel');
+      const localStatus = element('p','','maths-notation-status'); localStatus.setAttribute('role','status'); localStatus.setAttribute('aria-live','polite');
+      const announceHere = message => announce(message, localStatus);
+      const storageFailureHere = message => storageFailure(message, localStatus);
+      const saveHere = message => save(message, localStatus);
       const label = element('label',`Notation for ${group.label} (${group.scope})`), select = element('select');
       let selectId;
       do {selectId = `mk-notation-choice-${++serial}`;} while (document.getElementById(selectId));
@@ -131,11 +135,12 @@
         if (group.override !== undefined || !group.variants.has(select.value)) return;
         if (!choices.has(key) && choices.size >= preferences.LIMITS.choices) {
           select.value = group.current;
-          announce('The 128-choice limit was reached. Reset or import fewer choices before adding another context.');
+          announceHere('The 128-choice limit was reached. Reset or import fewer choices before adding another context.');
           return;
         }
-        action++; choices.set(key,select.value); apply(key,select.value); save();
-        if (storageAvailable) announce(`Notation updated for ${group.label} in ${group.scope}.`);
+        action++; choices.set(key,select.value); apply(key,select.value); saveHere();
+        if (storageAvailable) announceHere(`Notation updated for ${group.label} in ${group.scope}.`);
+        else storageFailureHere();
       });
       panel.append(label,select);
       if (group.override !== undefined) {
@@ -149,20 +154,20 @@
       checkbox.addEventListener('change',() => {
         action++; persist = checkbox.checked;
         for (const control of persistenceControls) control.checked = persist;
-        if (persist) save();
+        if (persist) saveHere();
         else {
           try {localStorage.removeItem(STORAGE_KEY);}
-          catch {storageFailure('Remembered choices could not be removed. Current page choices still work, but saved choices may return after navigation.');return;}
+          catch {storageFailureHere('Remembered choices could not be removed. Current page choices still work, but saved choices may return after navigation.');return;}
         }
-        if (storageAvailable) announce(persist ? 'Notation choices will be remembered in this browser.' : 'Remembered choices removed. Current page choices are kept until navigation.');
+        if (storageAvailable) announceHere(persist ? 'Notation choices will be remembered in this browser.' : 'Remembered choices removed. Current page choices are kept until navigation.');
       });
       const reset = element('button','Reset to authored notation'); reset.type = 'button';
       reset.addEventListener('click',() => {
         action++; choices.clear(); applyChoices();
         try {localStorage.removeItem(STORAGE_KEY);}
-        catch {storageFailure('Remembered choices could not be removed. Authored defaults are shown on this page, but saved choices may return after navigation.');return;}
-        if (persist && !save('Browser storage is unavailable. Saved choices were removed and authored defaults are restored; page choices still work and can be exported.')) return;
-        announce(storageAvailable ? 'All notation choices reset to the authored defaults and remembered choices removed.'
+        catch {storageFailureHere('Remembered choices could not be removed. Authored defaults are shown on this page, but saved choices may return after navigation.');return;}
+        if (persist && !saveHere('Browser storage is unavailable. Saved choices were removed and authored defaults are restored; page choices still work and can be exported.')) return;
+        announceHere(storageAvailable ? 'All notation choices reset to the authored defaults and remembered choices removed.'
           : 'All notation choices reset and remembered choices removed. Browser storage remains unavailable for remembering new choices.');
       });
       const download = element('button','Export notation choices'); download.type = 'button';
@@ -172,8 +177,8 @@
           const file = new Blob([preferences.encode(exportData())],{type:'application/json'});
           url = URL.createObjectURL(file);
           const link = element('a'); link.href = url; link.download = 'notation-choices.json'; link.click();
-          announce('Notation choices exported as JSON.');
-        } catch {announce('This browser could not export choices. Your current notation remains unchanged.');}
+          announceHere('Notation choices exported as JSON.');
+        } catch {announceHere('This browser could not export choices. Your current notation remains unchanged.');}
         finally {if (url) setTimeout(() => URL.revokeObjectURL(url),1000);}
       });
       const importLabel = element('label','Import notation choices from a local JSON file');
@@ -190,17 +195,16 @@
           choices.clear();
           for (const choice of saved.choices) choices.set(preferences.contextKey(choice),choice.variant);
           applyChoices();
-          if (persist && !save()) return;
+          if (persist && !saveHere()) return;
           const here = saved.choices.filter(choice => groups.has(preferences.contextKey(choice))).length;
-          announce(`Notation choices imported: ${here} applicable on this page; ${saved.choices.length - here} retained for other compatible contexts. Remembering remains a separate browser choice.`);
+          announceHere(`Notation choices imported: ${here} applicable on this page; ${saved.choices.length - here} retained for other compatible contexts. Remembering remains a separate browser choice.`);
         } catch {
-          if (request === action) announce('Notation choices could not be imported: the file is invalid, oversized or from a different registry. Current choices are unchanged.');
+          if (request === action) announceHere('Notation choices could not be imported: the file is invalid, oversized or from a different registry. Current choices are unchanged.');
         } finally {fileInput.value = '';}
       });
       panel.append(persistenceLabel,reset,download,importLabel,fileInput);
-      if (!statusNode) {
-        statusNode = element('p','','maths-notation-status'); statusNode.setAttribute('role','status'); statusNode.setAttribute('aria-live','polite'); panel.append(statusNode);
-      }
+      if (!statusNode) statusNode = localStatus;
+      panel.append(localStatus);
       host.replaceChildren(panel);
     }
     if (!statusNode && (!storageAvailable || stale || restored)) {

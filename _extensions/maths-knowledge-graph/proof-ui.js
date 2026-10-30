@@ -4,13 +4,15 @@ import {verifyProfileCandidate as verifyCandidateIntegrity,recordProfileMappingR
 import {createKernelClient,normalizeKernelHost} from './kernel-adapter.js';
 import {validateKernelInspection} from './kernel-inspector.js';
 import {verifyPublicProofProposal} from './proof-proposal.js';
-let sharedClient=null,active=null,lifecycle=0;
+import {proofHeadingLevel,proofRegionTitle,installCertificatePrint} from './proof-ui-context.js';
+installCertificatePrint(window,document);
+let sharedClient=null,active=null,lifecycle=0,headingSerial=0;
 const element=(tag,text,className)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node;};
 function download(value,type,name){const url=URL.createObjectURL(new Blob([value],{type})),link=element('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 function dispose(){lifecycle++;active?.abort();sharedClient?.dispose();sharedClient=null;active=null;}
 window.addEventListener('pagehide',dispose);
 async function mount(script){
- const panel=element('section',undefined,'mkg-proof-controls');panel.setAttribute('aria-label','Formal proof candidate');script.after(panel);
+ const panel=element('section',undefined,'mkg-proof-controls');panel.setAttribute('aria-label',`Formal proof candidate for ${script.closest('.maths-formal-proof')?.id || script.parentElement?.id || 'this proof'}`);script.after(panel);
  const notice=element('p','Checking the local candidate data…');notice.setAttribute('role','status');panel.append(notice);
  try{
   if(script.textContent.length>2*1024*1024)throw Error('candidate-limit');
@@ -27,7 +29,10 @@ async function mount(script){
     if(candidate.context.sourceProposalSha256!==proseProposal.sha256||candidate.context.source.path!==proseProposal.request.source.path||candidate.context.source.fileSha256!==proseProposal.request.source.sha256||candidate.context.proofId!==proseProposal.request.proof.id||candidate.context.statementId!==proseProposal.request.statement.id||candidate.source.text!==proseProposal.response.controlledProof.replace(/\r\n?/g,'\n'))throw Error('prose-proposal-binding-mismatch');
   }else if(candidate.context.sourceProposalSha256!==undefined)throw Error('missing-prose-proposal');
   let review=null,kernel={status:'not-requested'},reviewEpoch=0,requestEpoch=0;
-  panel.replaceChildren(element('h3','Inspect the proposed encoding'));
+  const level=proofHeadingLevel(script,document),heading=element(`h${level}`,proofRegionTitle(candidate.context,document.getElementById(candidate.context.statementId)?.querySelector('.theorem-title')?.textContent));
+  do{heading.id=`mkg-proof-heading-${++headingSerial}`;}while(document.getElementById(heading.id));
+  panel.replaceChildren(heading);panel.removeAttribute('aria-label');panel.setAttribute('aria-labelledby',heading.id);
+  const subheading=text=>element(`h${Math.min(6,level+1)}`,text);
   if(profile!=='controlled-propositional')panel.append(element('p',`Experimental typed profile: ${profile}. Inspect the declared sorts, signatures, witnesses and scoped obligations. It does not interpret arbitrary mathematical prose.`));
   const translation=element('p',proseProposal?'Translation: author-declared reviewed public projection of an AI-assisted proposal, compiled through the deterministic controlled-language boundary. Review is not authenticated; the kernel has not checked the original prose. Private model records are not published.':'Translation: deterministic controlled-language candidate. The original mathematical statement has not been certified.');
   const reviewStatus=element('p','Source mapping: unreviewed.'),kernelStatus=element('p','Kernel: not requested.');
@@ -63,13 +68,13 @@ async function mount(script){
   if(proseProposal){
     const original=element('details');original.append(element('summary','Inspect complete original source and model proposal'));
     original.append(element('p','All selected original statement and proof source is retained below. Source quotes and hashes locate the proposal; they do not establish semantic fidelity. The model cannot approve its own mapping or kernel result.'));
-    for(const key of ['statement','proof']){original.append(element('h4',key==='proof'?'Complete selected proof source':'Complete selected statement source'));original.append(element('pre',proseProposal.request[key].text));}
-    original.append(element('h4','Generated controlled encoding'),element('pre',candidate.source.text));
+    for(const key of ['statement','proof']){original.append(subheading(key==='proof'?'Complete selected proof source':'Complete selected statement source'));original.append(element('pre',proseProposal.request[key].text));}
+    original.append(subheading('Generated controlled encoding'),element('pre',candidate.source.text));
     if(proseProposal.version===2)original.append(element('p','The model proposed source-clause meanings and roles. Bounded deterministic search constructed this derivation; it does not establish that the original proof used the same reasoning. Inspect the complete original source and clause coverage.'));
     original.append(element('p','The author declared this selected source and encoding suitable for public release. That declaration does not authenticate a reviewer or establish semantic equivalence.'));
     if(proseProposal.version===2){
       const coverage=proseProposal.response.coverage,audit=proseProposal.response.synthesis?.sourceStepAudit;
-      original.append(element('h4','Source-clause coverage and support checks'));
+      original.append(subheading('Source-clause coverage and support checks'));
       original.append(element('p','Coverage locates the selected source clauses. It does not prove that their proposed meanings are faithful. Support checks use only the declared global prefix: a missing derivation is not a disproof, and local scopes or exhausted work budgets remain unknown. Assertions never become premises merely because they appear in the proof.'));
       original.append(element('pre',JSON.stringify({mapping:proseProposal.response.mapping,coverage,sourceStepAudit:audit},null,2)));
     }
@@ -143,7 +148,7 @@ async function mount(script){
       const epoch=++requestEpoch,pageEpoch=lifecycle,current=()=>epoch===requestEpoch&&pageEpoch===lifecycle;
       const ownedController=new AbortController();controller=ownedController;active=ownedController;let client;
       kernel={status:'requested'};inspectionDetails.hidden=true;inspectionDetails.replaceChildren();
-      run.disabled=true;cancel.disabled=false;kernelStatus.textContent='Kernel: loading or checking the explicitly selected runtime…';
+      run.disabled=false;run.setAttribute('aria-disabled','true');run.setAttribute('aria-busy','true');cancel.disabled=false;kernelStatus.textContent='Kernel: loading or checking the explicitly selected runtime…';
       try{
         client=sharedClient??=createKernelClient({hostUrl,timeoutMs:input.timeoutMs});
         const result=await client.check(candidate,{signal:ownedController.signal});if(!current())return;kernel=result;
@@ -153,10 +158,11 @@ async function mount(script){
             : kernel.status==='timeout'?'Kernel: timed out; no acceptance was recorded.'
               : 'Kernel: the candidate could not be accepted by this runtime. Preserve and inspect its receipt before drawing a conclusion.';
       }catch{if(current()){kernel={status:ownedController.signal.aborted?'cancelled':'unavailable'};kernelStatus.textContent=ownedController.signal.aborted?'Kernel: cancelled.':'Kernel: unavailable. The static candidate and original mathematics remain available.';}}
-      finally{if(active===ownedController)active=null;if(current()){run.disabled=false;cancel.disabled=true;}if(ownedController.signal.aborted&&sharedClient===client){sharedClient?.dispose();sharedClient=null;}}
+      finally{if(active===ownedController)active=null;if(current())settleOwnedControls();if(ownedController.signal.aborted&&sharedClient===client){sharedClient?.dispose();sharedClient=null;}}
     });
     const cancel=button('Cancel proof check',()=>controller?.abort());cancel.disabled=true;
-    window.addEventListener('pageshow',()=>{if(!active){run.disabled=false;cancel.disabled=true;}});
+    function settleOwnedControls(){const ownsCancel=document.activeElement===cancel;run.disabled=false;run.setAttribute('aria-disabled','false');run.setAttribute('aria-busy','false');cancel.disabled=true;if(ownsCancel&&run.isConnected)run.focus();}
+    window.addEventListener('pageshow',()=>{if(!active)settleOwnedControls();});
   }else panel.append(element('p','No proof engine host is configured. You can inspect and export the candidate, or configure the optional Sandbox-compatible host through YAML.'));
   const status=element('p','Candidate hashes identify this selected source, encoding, assumptions and configured toolchain; they are not signatures or mathematical approvals.');panel.append(status);
  }catch{notice.textContent='This formalisation data is unavailable or incompatible. The original statement, proof and static certificate remain readable.';}

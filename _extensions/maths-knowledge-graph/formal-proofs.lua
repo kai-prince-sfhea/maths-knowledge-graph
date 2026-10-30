@@ -20,6 +20,18 @@ function M.apply(doc,ctx)
   local html=quarto.doc.is_format('html:js') and quarto.doc.has_bootstrap()
   local count,used=0,false
   local visible=ctx.visible and ctx.visible() or {}
+  local function proof_code(block,label,proof_id,statement_id)
+    if html then
+      -- Native HTML attributes keep horizontal code scrolling available even
+      -- without the optional reader UI or automatic browser focus behavior.
+      block.classes:insert('mkg-proof-code')
+      block.attributes.tabindex='0'
+      block.attributes.role='region'
+      block.attributes['aria-label']=label..' for '..statement_id..' ('..proof_id..')'
+      used=true
+    end
+    return block
+  end
   local function contains_withheld(blocks)
     local found=false
     local function inspect(el)if ctx.withheld and ctx.withheld(el)then found=true;return el,false end end
@@ -66,19 +78,25 @@ function M.apply(doc,ctx)
     local candidate;ok,candidate=pcall(pandoc.json.decode,response)
     if not ok or type(candidate)~='table' or candidate.kind~='mkg-proof-candidate' then ctx.fail('formal proof helper returned incompatible data')end
     local prose_proposal=candidate.proseProposal;candidate.proseProposal=nil
+    el.content=el.content:walk({CodeBlock=function(block)
+      if block.classes:includes('maths-proof')then
+        return proof_code(block,'Authored controlled proof source',el.identifier,target)
+      end
+    end})
     el.content:insert(pandoc.Para({pandoc.Str(prose_proposal and 'Formalisation: an author-declared reviewed public projection of an AI-assisted encoding. Its complete selected public source and controlled encoding remain separately reviewable; the private response and named review receipt are not published. Review authenticity and semantic fidelity are not established.' or 'Formalisation: a proposed encoding of the selected controlled fragment. Source-mapping review and proof-kernel checking are separate from the original mathematical claim.')}))
     if candidate.status=='candidate' then
       el.content:insert(pandoc.Para({pandoc.Str('Generated closed Rocq certificate (unreviewed mapping; kernel not requested):')}))
-      el.content:insert(pandoc.CodeBlock(candidate.certificate.sourceText,pandoc.Attr('',{'coq'})))
+      if html then el.content:insert(pandoc.RawBlock('html','<details class="mkg-certificate"><summary>Inspect the generated certificate and encoding names</summary><div class="mkg-certificate-body">')) end
+      el.content:insert(proof_code(pandoc.CodeBlock(candidate.certificate.sourceText,pandoc.Attr('',{'coq'})),'Generated Rocq certificate',el.identifier,target))
       if candidate.certificate.bindings then
         local bindings=pandoc.List()
         for _,group in ipairs({'atoms','sorts','functions','predicates','binders','witnesses','assumptions','steps','induction'})do for _,entry in ipairs(candidate.certificate.bindings[group]or{})do
           bindings:insert({{pandoc.Code(entry.source)},{pandoc.Plain({pandoc.Code(entry.generated)})}})
         end end
-        el.content:insert(pandoc.Para({pandoc.Str('Encoding names (authored name followed by its generated certificate name):')}))
-        el.content:insert(pandoc.DefinitionList(bindings))
+        el.content:insert(pandoc.Div({pandoc.Para({pandoc.Str('Encoding names (authored name followed by its generated certificate name):')}),pandoc.DefinitionList(bindings)},pandoc.Attr('',{'mkg-encoding-names'})))
       end
       if html then
+        el.content:insert(pandoc.RawBlock('html','</div></details>'))
         local payload={version=1,candidate=candidate,timeoutMs=timeout*1000,hostUrl=host,proseProposal=prose_proposal}
         local encoded=pandoc.json.encode(payload):gsub('<','\\u003c'):gsub('>','\\u003e'):gsub('&','\\u0026')
         el.content:insert(pandoc.RawBlock('html','<script type="application/json" class="mkg-proof-data">'..encoded..'</script>'))
@@ -90,9 +108,9 @@ function M.apply(doc,ctx)
     return el
   end
   doc.blocks=doc.blocks:walk({Div=formal})
-  if used then quarto.doc.add_html_dependency({name='maths-knowledge-graph-proofs',version='0.0.9',
+  if used then quarto.doc.add_html_dependency({name='maths-knowledge-graph-proofs',version='0.0.10',
     scripts={{path='proof-ui.js',attribs={type='module'}}},stylesheets={'proof-ui.css'},
-    resources={'proof-candidate.js','proof-mapping.js','proof-profiles.js','proof-typed.js','proof-proposal.js','proof-clause-plan.js','proof-plan-search.js','kernel-adapter.js','kernel-inspector.js','kernel-host.html','kernel-host.js'}})end
+    resources={'proof-ui-context.js','proof-candidate.js','proof-mapping.js','proof-profiles.js','proof-typed.js','proof-proposal.js','proof-clause-plan.js','proof-plan-search.js','kernel-adapter.js','kernel-inspector.js','kernel-host.html','kernel-host.js'}})end
   return doc
 end
 return M
